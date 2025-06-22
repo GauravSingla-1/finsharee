@@ -1,0 +1,63 @@
+The Identity Foundation: User Service
+
+This service is the definitive authority for all user-related information. It manages the user's core profile and their identity within the FinShare social graph, which is essential for group-based features.
+
+3.1 High-Level Responsibilities
+
+User Lifecycle Management: Responsible for creating a user profile document in the database the first time a newly authenticated user accesses the system.
+Profile Management: Provides the necessary CRUD (Create, Read, Update, Delete) API endpoints for managing a user's profile data, including their displayName, profileImageUrl, and email, as specified in the user profile setup story.1
+User Discovery: Offers a mechanism for users to look up other users by their phone number, a critical function for inviting friends to groups and building the social network.
+
+3.2 Low-Level Design
+
+The User Service will be implemented using Spring Boot and will use Spring Data Firestore for its persistence layer.11
+The PRD requires that users signing up with a social provider like Google must also provide and verify a phone number.1 This is not merely for two-factor authentication; it is the strategic key to unlocking the app's social graph. This requirement leads to a "dual identity" model for each user: the system's internal, immutable primary key (
+userId from Firebase Authentication) and the user-facing, social identifier (phoneNumber).
+When a user wishes to add a friend to a group, their mental model is based on their phone's contact list. The application's UI will therefore allow them to search for friends using phone numbers. This search request is directed to the User Service's /api/users/search endpoint. The service acts as a resolver, taking the social identifier (phoneNumber) and returning the corresponding system identifier (userId). The client application then uses this resolved userId to make subsequent requests to the Group & Expense Service to add that friend to a group. This design elegantly decouples the user's intuitive social interaction model from the backend's more robust and private data relationship model. It allows the system to use stable, non-personally-identifiable UIDs for all internal data references (e.g., in the members array of a group document), which is superior for privacy and data integrity, while still providing the phone-based discovery experience users expect.
+Data Model (Firestore users collection):
+The service will manage a single collection named users.
+Document ID: The document ID will be the user's userId (the UID provided by Firebase Authentication). Using this non-sequential, randomly distributed key is a best practice that helps prevent "hotspotting" and ensures write scalability in Firestore.23
+Fields:
+phoneNumber: (String, Indexed) The user's verified phone number, which will be indexed for fast lookups during friend searches.
+displayName: (String) The user's full name.
+email: (String) The user's email address, typically sourced from Google Sign-In.
+profileImageUrl: (String) A URL pointing to the user's profile picture.
+createdAt: (Timestamp) The timestamp of when the user profile was created.
+Internal Logic:
+User Creation: User profiles are provisioned on a "just-in-time" basis. The creation process is not triggered directly by a client call but is initiated internally when the service receives a request from a user for whom no profile exists. The service will check for the existence of a document with the X-Authenticated-User-ID and, if not found, will create one.
+Phone Number Uniqueness: Before creating a new user profile, the service must perform a query on the users collection to ensure the provided phoneNumber is not already associated with another account, enforcing uniqueness at the application layer.
+
+3.3 API Contract
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success 200)
+Detailed Logic
+/api/users/me
+GET
+(none)
+UserDto
+Fetches the Firestore document from the users collection where the document ID matches the X-Authenticated-User-ID header. If the document doesn't exist, it creates a new profile stub before returning.
+/api/users/me
+PUT
+UpdateUserDto
+UserDto
+Updates the authenticated user's profile. Fetches the user document, applies the changes from the DTO (displayName, profileImageUrl), and saves it back to Firestore. Returns the updated user profile.
+/api/users/search
+GET
+Query Param: phone
+SearchedUserDto
+Queries the users collection on the indexed phoneNumber field. For privacy, returns a simplified DTO containing only non-sensitive, publicly identifiable information needed to add a user to a group.
+
+Data Transfer Objects (DTOs):
+UserDto: { "userId": string, "phoneNumber": string, "displayName": string, "email": string, "profileImageUrl": string, "createdAt": timestamp }
+UpdateUserDto: { "displayName": string, "profileImageUrl": string } (All fields are optional)
+SearchedUserDto: { "userId": string, "displayName": string, "profileImageUrl": string }
+
+3.4 Testing Plan
+
+Unit Testing: Test the service layer logic, such as the just-in-time user creation and the mapping between domain objects and DTOs. Mock the Firestore repository to test business logic in isolation.
+Integration Testing: Use @SpringBootTest with an in-memory Firestore emulator (like the one provided by the Firebase Test SDK) to test the full repository and service layers. Use MockMvc to test the controller layer, verifying API contracts, request validation, and correct HTTP status codes.
+E2E Testing: Test the user profile creation and update flows from the client application against a deployed instance of the User Service.
