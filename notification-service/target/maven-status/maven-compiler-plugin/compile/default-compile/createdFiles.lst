@@ -1,6 +1,0 @@
-com/finshare/notifications/dto/NotificationEventDto.class
-com/finshare/notifications/consumer/PubSubEventConsumer.class
-com/finshare/notifications/controller/NotificationController.class
-com/finshare/notifications/NotificationServiceApplication.class
-com/finshare/notifications/service/NotificationService.class
-com/finshare/notifications/config/WebClientConfig.class

@@ -1,6 +1,0 @@
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/service/NotificationService.java
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/dto/NotificationEventDto.java
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/NotificationServiceApplication.java
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/consumer/PubSubEventConsumer.java
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/config/WebClientConfig.java
-/home/runner/workspace/notification-service/src/main/java/com/finshare/notifications/controller/NotificationController.java

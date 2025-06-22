@@ -14,18 +14,6 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "FinShare API Gateway"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "User Service"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Group Expense Service"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Balance Settlement Service"
 
 [[workflows.workflow.tasks]]
@@ -34,38 +22,19 @@ args = "AI Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Analytics Insights Service"
+args = "Analytics Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Notification Service"
 
-[[workflows.workflow]]
-name = "FinShare API Gateway"
-author = "agent"
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Gateway"
 
 [[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "User Service"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd user-service && mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8001\""
-waitForPort = 8001
-
-[[workflows.workflow]]
-name = "Group Expense Service"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd group-expense-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8002\""
-waitForPort = 8002
+task = "workflow.run"
+args = "Group Expense Service"
 
 [[workflows.workflow]]
 name = "Balance Settlement Service"
@@ -73,7 +42,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd balance-settlement-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8003\""
+args = "cd services/balance-settlement-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8003\""
 waitForPort = 8003
 
 [[workflows.workflow]]
@@ -82,16 +51,16 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd ai-service && python main.py"
+args = "cd services/ai-service && python main.py"
 waitForPort = 8004
 
 [[workflows.workflow]]
-name = "Analytics Insights Service"
+name = "Analytics Service"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd analytics-insights-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8005\""
+args = "cd services/analytics-insights-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8005\""
 waitForPort = 8005
 
 [[workflows.workflow]]
@@ -100,8 +69,26 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd notification-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8006\""
+args = "cd services/notification-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8006\""
 waitForPort = 8006
+
+[[workflows.workflow]]
+name = "API Gateway"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd services/api-gateway && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Group Expense Service"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd services/group-expense-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8002\""
+waitForPort = 8002
 
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
