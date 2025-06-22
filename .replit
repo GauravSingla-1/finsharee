@@ -1,8 +1,8 @@
-modules = ["java-graalvm22.3", "python-3.11"]
+modules = ["java-graalvm22.3", "python-3.11", "bash"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["libxcrypt", "maven", "redis", "jq"]
+packages = ["jq", "libxcrypt", "maven", "redis"]
 
 [workflows]
 runButton = "Project"
@@ -39,6 +39,10 @@ args = "Analytics Insights Service"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Notification Service"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "User Service Fixed"
 
 [[workflows.workflow]]
 name = "FinShare API Gateway"
@@ -102,6 +106,15 @@ author = "agent"
 task = "shell.exec"
 args = "cd notification-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8006\""
 waitForPort = 8006
+
+[[workflows.workflow]]
+name = "User Service Fixed"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd user-service && mvn spring-boot:run -Dspring-boot.run.args=\"--server.port=8001 --server.address=0.0.0.0\""
+waitForPort = 8001
 
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
