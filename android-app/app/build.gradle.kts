@@ -5,6 +5,8 @@ plugins {
     id("kotlin-kapt")
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -112,6 +114,42 @@ dependencies {
     
     // Date Picker
     implementation("io.github.vanpra.compose-material-dialogs:datetime:0.9.0")
+    
+    // Firebase BOM
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    
+    // Google Play Services
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    
+    // Camera & ML Kit for Receipt Scanning
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+    
+    // Work Manager for Background Tasks
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    
+    // Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    
+    // SMS Parsing
+    implementation("com.googlecode.libphonenumber:libphonenumber:8.13.27")
+    
+    // Lottie Animations
+    implementation("com.airbnb.android:lottie-compose:6.3.0")
+    
+    // WebSocket for Real-time
+    implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     
     // Testing
     testImplementation("junit:junit:4.13.2")

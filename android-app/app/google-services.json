@@ -1,0 +1,38 @@
+{
+  "project_info": {
+    "project_number": "123456789012",
+    "project_id": "finshare-app",
+    "storage_bucket": "finshare-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789012:android:abcdef123456789",
+        "android_client_info": {
+          "package_name": "com.finshare.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.finshare.android",
+            "certificate_hash": "abcdef1234567890abcdef1234567890abcdef12"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDemoKey-Replace-With-Real-Key-In-Production"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

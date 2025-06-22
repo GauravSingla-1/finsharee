@@ -4,39 +4,59 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.finshare.android.presentation.screens.auth.AuthScreen
 import com.finshare.android.presentation.screens.dashboard.DashboardScreen
 import com.finshare.android.presentation.screens.groups.GroupsScreen
 import com.finshare.android.presentation.screens.expenses.ExpensesScreen
 import com.finshare.android.presentation.screens.profile.ProfileScreen
+import com.finshare.android.presentation.screens.ai.AiCoPilotScreen
+import com.finshare.android.presentation.screens.receipt.ReceiptScanScreen
 
-/**
- * Main navigation component for FinShare Android application
- * Implements bottom navigation with Clean Architecture pattern
- */
 @Composable
-fun FinShareNavigation(navController: NavHostController) {
+fun FinShareNavigation(
+    navController: NavHostController,
+    startDestination: String = FinShareDestinations.AUTH
+) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Dashboard.route
+        startDestination = startDestination
     ) {
-        composable(Screen.Dashboard.route) {
+        composable(FinShareDestinations.AUTH) {
+            AuthScreen(navController = navController)
+        }
+        
+        composable(FinShareDestinations.DASHBOARD) {
             DashboardScreen(navController = navController)
         }
-        composable(Screen.Groups.route) {
+        
+        composable(FinShareDestinations.GROUPS) {
             GroupsScreen(navController = navController)
         }
-        composable(Screen.Expenses.route) {
+        
+        composable(FinShareDestinations.EXPENSES) {
             ExpensesScreen(navController = navController)
         }
-        composable(Screen.Profile.route) {
+        
+        composable(FinShareDestinations.PROFILE) {
             ProfileScreen(navController = navController)
+        }
+        
+        composable(FinShareDestinations.AI_COPILOT) {
+            AiCoPilotScreen(navController = navController)
+        }
+        
+        composable(FinShareDestinations.RECEIPT_SCAN) {
+            ReceiptScanScreen(navController = navController)
         }
     }
 }
 
-sealed class Screen(val route: String) {
-    object Dashboard : Screen("dashboard")
-    object Groups : Screen("groups")
-    object Expenses : Screen("expenses")
-    object Profile : Screen("profile")
+object FinShareDestinations {
+    const val AUTH = "auth"
+    const val DASHBOARD = "dashboard"
+    const val GROUPS = "groups"
+    const val EXPENSES = "expenses"
+    const val PROFILE = "profile"
+    const val AI_COPILOT = "ai_copilot"
+    const val RECEIPT_SCAN = "receipt_scan"
 }

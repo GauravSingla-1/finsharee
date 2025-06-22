@@ -7,11 +7,20 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class User(
-    val id: String,
+    val userId: String,
     val email: String,
     val displayName: String,
-    val profileImageUrl: String? = null,
     val phoneNumber: String? = null,
+    val profileImageUrl: String? = null,
+    val isEmailVerified: Boolean = false,
     val createdAt: String,
-    val isEmailVerified: Boolean = false
+    val lastActive: String,
+    val groupCount: Int = 0,
+    val status: String = "ACTIVE"
+)
+
+@Serializable
+data class AuthResult(
+    val user: User,
+    val token: String
 )
