@@ -30,6 +30,10 @@ spring:
       enabled: true
       path: /h2-console
 
+# Disable Firebase for development
+firebase:
+  enabled: false
+
 # Management and monitoring
 management:
   endpoints:
