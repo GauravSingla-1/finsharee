@@ -1,5 +1,5 @@
-/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/model/Group.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/model/ExpensePayer.java
+/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/model/Group.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/service/UserServiceClient.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/dto/SearchedUserDto.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/GroupExpenseServiceApplication.java
@@ -11,13 +11,13 @@
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/exception/GroupNotFoundException.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/controller/ExpenseController.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/dto/GroupDetailDto.java
-/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/enums/SplitMethod.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/dto/GroupDto.java
+/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/enums/SplitMethod.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/dto/CreateExpenseDto.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/repository/TransactionRepository.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/service/GroupService.java
-/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/service/ExpenseService.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/exception/ExpenseNotFoundException.java
+/home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/service/ExpenseService.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/model/ExpenseSplit.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/model/Expense.java
 /home/runner/workspace/group-expense-service/src/main/java/com/finshare/groupexpenseservice/exception/GlobalExceptionHandler.java

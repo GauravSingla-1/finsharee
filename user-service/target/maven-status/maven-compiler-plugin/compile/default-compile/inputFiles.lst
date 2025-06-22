@@ -7,6 +7,6 @@
 /home/runner/workspace/user-service/src/main/java/com/finshare/userservice/exception/UserNotFoundException.java
 /home/runner/workspace/user-service/src/main/java/com/finshare/userservice/model/User.java
 /home/runner/workspace/user-service/src/main/java/com/finshare/userservice/dto/UserDto.java
-/home/runner/workspace/user-service/src/main/java/com/finshare/userservice/mapper/UserMapper.java
 /home/runner/workspace/user-service/src/main/java/com/finshare/userservice/exception/GlobalExceptionHandler.java
+/home/runner/workspace/user-service/src/main/java/com/finshare/userservice/mapper/UserMapper.java
 /home/runner/workspace/user-service/src/main/java/com/finshare/userservice/controller/UserController.java
