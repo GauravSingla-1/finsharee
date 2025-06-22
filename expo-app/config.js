@@ -1,15 +1,15 @@
 // API Configuration for FinShare Mobile App
 export const API_CONFIG = {
-  // Use tunnel URL for mobile device testing
-  BASE_URL: 'http://172.31.128.45:5000',
-  
-  // Alternative: Use Replit's public URL format
-  // BASE_URL: 'https://workspace-username.replit.app',
-  
-  // For local development (won't work on mobile devices)
-  // BASE_URL: 'http://localhost:5000',
+  // Use tunnel URL for mobile device testing with new authenticated backend
+  BASE_URL: 'http://172.31.128.45:8000',
   
   ENDPOINTS: {
+    // Authentication endpoints
+    LOGIN: '/api/auth/login',
+    REGISTER: '/api/auth/register',
+    USER: '/api/auth/user',
+    
+    // Core feature endpoints
     DASHBOARD: '/api/dashboard',
     GROUPS: '/api/groups',
     EXPENSES: '/api/expenses',

@@ -8,6 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from datetime import datetime
 import json
+import os
+from google import genai
+
+# Configure Gemini AI
+genai_client = None
+if os.getenv("GEMINI_API_KEY"):
+    genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI(title="FinShare Backend", version="1.0.0")
 
@@ -112,36 +119,97 @@ async def create_expense(expense_data: dict):
 async def get_dashboard():
     return dashboard_data
 
+
+
 @app.post("/api/ai/categorize")
 async def categorize_expense(request: dict):
-    merchant = request.get("merchant_text", "").lower()
-    
-    # Simple categorization logic
-    if any(word in merchant for word in ["restaurant", "cafe", "food", "pizza", "burger"]):
-        category = "FOOD"
-        confidence = 0.95
-    elif any(word in merchant for word in ["uber", "taxi", "gas", "fuel", "transport"]):
-        category = "TRANSPORTATION"
-        confidence = 0.92
-    elif any(word in merchant for word in ["hotel", "airbnb", "booking", "accommodation"]):
-        category = "ACCOMMODATION"
-        confidence = 0.90
-    elif any(word in merchant for word in ["grocery", "supermarket", "walmart", "target"]):
-        category = "GROCERIES"
-        confidence = 0.88
-    else:
-        category = "OTHER"
-        confidence = 0.75
-    
-    return {
-        "predicted_category": category,
-        "confidence_score": confidence,
-        "alternative_categories": ["ENTERTAINMENT", "SHOPPING", "UTILITIES"]
-    }
+    try:
+        merchant = request.get("merchant_text", "")
+        if not merchant:
+            raise HTTPException(status_code=400, detail="merchant_text is required")
+        
+        # Use Gemini AI for categorization
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"""
+        Categorize this expense merchant/description: "{merchant}"
+        
+        Choose from these categories: FOOD, TRANSPORTATION, ACCOMMODATION, GROCERIES, ENTERTAINMENT, SHOPPING, UTILITIES, HEALTHCARE, OTHER
+        
+        Respond with JSON format:
+        {{
+            "category": "CATEGORY_NAME",
+            "confidence": 0.95
+        }}
+        """
+        
+        response = model.generate_content(prompt)
+        
+        # Parse response
+        import re
+        json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+            return {
+                "predicted_category": result.get("category", "OTHER"),
+                "confidence_score": result.get("confidence", 0.8),
+                "alternative_categories": ["ENTERTAINMENT", "SHOPPING", "UTILITIES"]
+            }
+        else:
+            # Fallback categorization
+            merchant_lower = merchant.lower()
+            if any(word in merchant_lower for word in ["restaurant", "cafe", "food", "pizza", "burger"]):
+                category = "FOOD"
+                confidence = 0.95
+            elif any(word in merchant_lower for word in ["uber", "taxi", "gas", "fuel", "transport"]):
+                category = "TRANSPORTATION"
+                confidence = 0.92
+            elif any(word in merchant_lower for word in ["hotel", "airbnb", "booking", "accommodation"]):
+                category = "ACCOMMODATION"
+                confidence = 0.90
+            elif any(word in merchant_lower for word in ["grocery", "supermarket", "walmart", "target"]):
+                category = "GROCERIES"
+                confidence = 0.88
+            else:
+                category = "OTHER"
+                confidence = 0.75
+            
+            return {
+                "predicted_category": category,
+                "confidence_score": confidence,
+                "alternative_categories": ["ENTERTAINMENT", "SHOPPING", "UTILITIES"]
+            }
+    except Exception as e:
+        print(f"Categorization error: {e}")
+        return {
+            "predicted_category": "OTHER",
+            "confidence_score": 0.5,
+            "alternative_categories": ["FOOD", "TRANSPORTATION", "SHOPPING"]
+        }
 
 @app.post("/api/ai/chat")
 async def chat_copilot(request: dict):
-    message = request.get("message", "").lower()
+    try:
+        message = request.get("message", "")
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
+        
+        # Use Gemini AI for chat
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"""
+        You are FinShare Co-Pilot, a helpful financial assistant for expense management.
+        
+        User message: "{message}"
+        
+        Provide helpful, concise advice about expense management, budgeting, or group expense splitting.
+        Keep responses under 200 words and be practical.
+        """
+        
+        response = model.generate_content(prompt)
+        return {"reply": response.text}
+        
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return {"reply": "I'm here to help with your expense management questions! Try asking about budgeting tips, expense categorization, or group expense splitting."}
     
     if "budget" in message:
         response = "Based on your spending patterns, I recommend setting a monthly budget of $800. You're currently spending about $567 this month."

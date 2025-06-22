@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../config';
 
 export default function AICoPilotScreen() {
   const [messages, setMessages] = useState([]);
@@ -29,6 +30,27 @@ export default function AICoPilotScreen() {
     ]);
   }, []);
 
+  const makeAuthenticatedRequest = async (endpoint, options = {}) => {
+    const token = await AsyncStorage.getItem('authToken');
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...API_CONFIG.HEADERS,
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
+      throw new Error(errorData.detail || `HTTP ${response.status}`);
+    }
+    
+    return response.json();
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim()) return;
 
@@ -40,20 +62,15 @@ export default function AICoPilotScreen() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = inputText;
     setInputText('');
     setLoading(true);
 
     try {
-      const userId = await AsyncStorage.getItem('userId');
-      
-      const response = await fetch('http://YOUR_IP:8004/api/ai/copilot/chat', {
+      const response = await makeAuthenticatedRequest(API_CONFIG.ENDPOINTS.AI_CHAT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Authenticated-User-ID': userId,
-        },
         body: JSON.stringify({
-          message: inputText,
+          message: messageToSend,
           conversation_history: messages.slice(-5).map(msg => ({
             role: msg.isUser ? 'user' : 'model',
             text: msg.text,
@@ -61,18 +78,9 @@ export default function AICoPilotScreen() {
         }),
       });
 
-      let aiResponse;
-      if (response.ok) {
-        const data = await response.json();
-        aiResponse = data.reply;
-      } else {
-        // Fallback AI responses for demo
-        aiResponse = getAIResponse(inputText);
-      }
-
       const aiMessage = {
         id: (Date.now() + 1).toString(),
-        text: aiResponse,
+        text: response.reply,
         isUser: false,
         timestamp: new Date(),
       };

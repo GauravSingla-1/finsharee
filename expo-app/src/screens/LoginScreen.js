@@ -10,53 +10,86 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { API_CONFIG } from '../../config';
 
 export default function LoginScreen({ onLogin }) {
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('demo@finshare.app');
+  const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [name, setName] = useState('Demo User');
+
+  const makeAuthenticatedRequest = async (endpoint, options = {}) => {
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...API_CONFIG.HEADERS,
+        ...options.headers,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
+      throw new Error(errorData.detail || `HTTP ${response.status}`);
+    }
+    
+    return response.json();
+  };
 
   const handleLogin = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate authentication with backend
-      const response = await fetch('http://YOUR_IP:5000/api/auth/login', {
+      const result = await makeAuthenticatedRequest(API_CONFIG.ENDPOINTS.LOGIN, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phoneNumber }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        await AsyncStorage.setItem('userToken', data.token);
-        await AsyncStorage.setItem('userId', data.userId);
-        onLogin();
-      } else {
-        // For demo purposes, allow any 10-digit number
-        if (phoneNumber.length === 10) {
-          await AsyncStorage.setItem('userToken', 'demo-token');
-          await AsyncStorage.setItem('userId', `user-${phoneNumber}`);
-          onLogin();
-        } else {
-          Alert.alert('Error', 'Invalid credentials');
-        }
-      }
+      // Store token and user info
+      await AsyncStorage.setItem('authToken', result.token);
+      await AsyncStorage.setItem('user', JSON.stringify(result.user));
+      
+      onLogin(result.user);
     } catch (error) {
-      console.error('Login error:', error);
-      // Demo mode - allow login with any 10-digit number
-      if (phoneNumber.length === 10) {
-        await AsyncStorage.setItem('userToken', 'demo-token');
-        await AsyncStorage.setItem('userId', `user-${phoneNumber}`);
-        onLogin();
-      } else {
-        Alert.alert('Error', 'Login failed. Using demo mode.');
-      }
+      Alert.alert('Login Failed', error.message || 'Please check your credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!email.trim() || !password.trim() || !name.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await makeAuthenticatedRequest(API_CONFIG.ENDPOINTS.REGISTER, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+          name: name.trim(),
+        }),
+      });
+
+      // Store token and user info
+      await AsyncStorage.setItem('authToken', result.token);
+      await AsyncStorage.setItem('user', JSON.stringify(result.user));
+      
+      Alert.alert('Success', 'Account created successfully!');
+      onLogin(result.user);
+    } catch (error) {
+      Alert.alert('Registration Failed', error.message || 'Please try again');
     } finally {
       setLoading(false);
     }
@@ -71,30 +104,68 @@ export default function LoginScreen({ onLogin }) {
       </View>
 
       <View style={styles.loginForm}>
-        <Text style={styles.label}>Phone Number</Text>
+        <Text style={styles.label}>{isRegisterMode ? 'Create Account' : 'Login to FinShare'}</Text>
+        
+        {isRegisterMode && (
+          <>
+            <Text style={styles.fieldLabel}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          </>
+        )}
+        
+        <Text style={styles.fieldLabel}>Email</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter your phone number"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-          keyboardType="phone-pad"
-          maxLength={15}
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
+        <Text style={styles.fieldLabel}>Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
         />
 
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={handleLogin}
+          onPress={isRegisterMode ? handleRegister : handleLogin}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>
+              {isRegisterMode ? 'Create Account' : 'Login'}
+            </Text>
           )}
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.switchButton}
+          onPress={() => setIsRegisterMode(!isRegisterMode)}
+          disabled={loading}
+        >
+          <Text style={styles.switchButtonText}>
+            {isRegisterMode ? 'Already have an account? Login' : 'Need an account? Sign up'}
+          </Text>
+        </TouchableOpacity>
+
         <Text style={styles.demoText}>
-          Demo Mode: Enter any 10-digit number to login
+          Demo credentials: demo@finshare.app / password123
         </Text>
       </View>
 
@@ -136,7 +207,14 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333',
+    textAlign: 'center',
+  },
+  fieldLabel: {
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
     color: '#333',
@@ -160,6 +238,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  switchButton: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  switchButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
   demoText: {
     textAlign: 'center',
