@@ -1,0 +1,185 @@
+Based on the "FinShare Application: Comprehensive Backend Design Document," here are the testing plans for all services, a consolidated end-to-end (E2E) testing strategy, and mock data for testing purposes.
+
+### **Service-Specific Testing Plans**
+
+Here is a breakdown of the testing strategy for each microservice as detailed in the design document:
+
+#### **1. API Gateway Service**
+
+  * [cite\_start]**Unit Testing**: Focus on testing individual routing predicate factories and gateway filters in isolation[cite: 46]. [cite\_start]Downstream services should be mocked to confirm that requests are correctly routed based on their path and HTTP method[cite: 47].
+  * [cite\_start]**Integration Testing**: Utilize `WebTestClient` to test the gateway's functionality within a running Spring context[cite: 48]. [cite\_start]Key integration tests include verifying the JWT authentication filter's ability to validate and reject tokens correctly and testing the configured rate-limiting rules[cite: 49].
+  * [cite\_start]**End-to-End (E2E) Testing**: As part of the comprehensive application E2E testing suite, all client requests will be routed through the API Gateway[cite: 50]. [cite\_start]This will validate that the gateway correctly directs traffic to the appropriate live downstream services in a staging environment[cite: 51].
+
+#### **2. User Service**
+
+  * [cite\_start]**Unit Testing**: Test the core service layer logic, such as the just-in-time user profile creation and the mapping between domain objects and Data Transfer Objects (DTOs)[cite: 78]. [cite\_start]The Firestore repository should be mocked to test this business logic in isolation[cite: 79].
+  * [cite\_start]**Integration Testing**: Employ `@SpringBootTest` along with a Firestore emulator (like the one from the Firebase Test SDK) to conduct tests on the complete repository and service layers[cite: 80]. [cite\_start]`MockMvc` will be used to test the controller layer, ensuring API contracts, request validation, and correct HTTP status codes are functioning as expected[cite: 81].
+  * [cite\_start]**E2E Testing**: The primary E2E tests for this service involve testing the user profile creation and update flows, initiated from the client application against a deployed instance of the User Service[cite: 82].
+
+#### **3. Group & Expense Service**
+
+  * [cite\_start]**Unit Testing**: Conduct extensive testing of the expense splitting logic for each method (equal, exact, percentage, shares) to guarantee calculation accuracy[cite: 106]. [cite\_start]The Firestore repository and Pub/Sub template should be mocked to test the service layer's business logic independently[cite: 107].
+  * [cite\_start]**Integration Testing**: A Firestore emulator is crucial for testing the transactional integrity of creating and updating expenses[cite: 108]. [cite\_start]These tests must verify that any error during a multi-write operation results in a complete rollback of all database changes[cite: 109]. [cite\_start]`MockMvc` should be used to validate complex `CreateExpenseDto` objects at the API layer[cite: 110].
+  * [cite\_start]**E2E Testing**: The E2E tests for this core service will cover the entire expense lifecycle: creating a group, adding a member, adding an expense with a complex split, verifying balances, and finally, deleting the expense[cite: 111].
+
+#### **4. Balance & Settlement Service**
+
+  * [cite\_start]**Unit Testing**: Focus heavily on the "Simplify Debts" algorithm[cite: 129]. [cite\_start]Tests should cover various scenarios including simple debts, circular debts (e.g., A owes B, B owes C, C owes A), and situations with multiple debtors and creditors to ensure the output is always the minimal number of required transactions[cite: 130].
+  * [cite\_start]**Integration Testing**: Use a Firestore emulator with a pre-populated set of transaction documents to test the balance calculation logic[cite: 131]. [cite\_start]It's also important to verify that recording a payment correctly updates the `isSettled` flags on the corresponding documents[cite: 132].
+  * [cite\_start]**E2E Testing**: Test the complete settlement workflow: create debts within a group, simplify them, record a manual payment, and verify that the group balances are correctly updated and settled[cite: 133].
+
+#### **5. AI Service**
+
+  * [cite\_start]**Unit Testing**: Test the categorization model's prediction logic with a diverse set of merchant strings[cite: 159]. [cite\_start]Additionally, test the prompt engineering logic for the Gemini Co-Pilot to ensure it properly anonymizes data while constructing context-rich prompts[cite: 160].
+  * [cite\_start]**Integration Testing**: Use FastAPI's `TestClient` to test the API endpoints[cite: 161]. [cite\_start]Mock the Gemini API and other external services to test the service's behavior in isolation[cite: 162]. [cite\_start]The Pub/Sub consumer logic for the autotraining feedback loop must also be tested[cite: 163].
+  * [cite\_start]**E2E Testing**: Perform E2E tests on the Co-Pilot features by sending real requests to the Gemini API in a sandboxed environment to validate the quality and structure of the responses[cite: 164].
+
+#### **6. Analytics & Insights Service**
+
+  * [cite\_start]**Unit Testing**: Test the logic of the Pub/Sub event consumer responsible for updating Redis[cite: 180]. [cite\_start]Simulate various event types (`expense_created`, `expense_deleted`) to verify that the correct Redis commands (`HINCRBYFLOAT`) are generated[cite: 181]. [cite\_start]The budget alert scheduler logic should also be unit tested[cite: 182].
+  * [cite\_start]**Integration Testing**: Use an embedded Redis server and a Firestore emulator[cite: 183]. [cite\_start]Publish mock events to a test Pub/Sub topic and confirm that the data in the embedded Redis instance is updated as expected[cite: 183]. [cite\_start]The `/api/analytics/dashboard` endpoint should be tested to ensure it reads correctly from Redis[cite: 184].
+  * [cite\_start]**E2E Testing**: The key E2E test is to create a new expense and then immediately request the dashboard endpoint to verify that the real-time aggregation pipeline is working correctly and the dashboard instantly reflects the new expense[cite: 185].
+
+#### **7. Notification Service**
+
+  * [cite\_start]**Unit Testing**: Test the message formatting logic for each type of event[cite: 205]. [cite\_start]For a given sample event payload, verify that the correct human-readable notification string is produced[cite: 206]. [cite\_start]The FCM and User Service clients should be mocked[cite: 207].
+  * [cite\_start]**Integration Testing**: Utilize a test implementation of the Pub/Sub binder to send mock events to the service's consumer function[cite: 208]. [cite\_start]Verify that the service correctly calls the mocked FCM client with the properly formatted payload[cite: 208].
+  * [cite\_start]**E2E Testing**: In a staging environment, perform an action that is designed to trigger a notification, such as adding an expense[cite: 209]. [cite\_start]The test passes if a real push notification is received on a registered test device[cite: 210].
+
+#### **8. Deployment & Operations**
+
+  * [cite\_start]**CI/CD Pipeline Testing**: The pipeline itself requires testing, including build scripts, the Docker image creation process (verifying layers and size), and the deployment scripts that apply Kubernetes manifests[cite: 231].
+  * [cite\_start]**Smoke Testing**: After every deployment, automated smoke tests should be executed[cite: 232]. [cite\_start]These are a small suite of critical E2E tests (e.g., user login, expense creation) that provide a quick verification of the deployment's success and the application's health[cite: 233].
+  * [cite\_start]**Deployment Strategy Testing**: When using advanced strategies like canary or blue-green deployments, the process must be tested[cite: 234]. [cite\_start]This includes verifying traffic shifting, monitoring the health of the new version, and ensuring that automated rollback procedures are triggered on failure[cite: 235].
+
+### **Comprehensive End-to-End (E2E) Testing Scenario**
+
+A comprehensive E2E test would simulate a complete user journey through the application, touching multiple services.
+
+**Scenario: "Trip to the Alps"**
+
+1.  **User & Group Setup (User Service, Group & Expense Service)**
+
+      * **Action**: User A signs up and creates a profile.
+      * **Action**: User A creates a new group called "Trip to the Alps".
+      * **Action**: User A searches for User B by their phone number and adds them to the group.
+      * **Verification**: All actions succeed, and User B receives a notification (Notification Service).
+
+2.  **Expense Creation & Splitting (Group & Expense Service)**
+
+      * **Action**: User A adds an expense: "Flights" for $1200, paid by User A, split equally.
+      * **Action**: User B adds an expense: "Airbnb" for $800, paid by User B, split equally.
+      * **Action**: User A adds another expense: "Groceries" for $150, paid by User A, split by exact amounts ($100 for User A, $50 for User B).
+      * **Verification**: All expenses are created correctly. Notifications are sent for each new expense (Notification Service).
+
+3.  **Balance & Dashboard Check (Balance Service, Analytics & Insights Service)**
+
+      * **Action**: User A checks their overall balance.
+      * **Verification**: The balance is calculated correctly. User A sees they are owed money.
+      * **Action**: User B opens the "Trip to the Alps" group dashboard.
+      * **Verification**: The dashboard loads instantly and shows correct spending by category (e.g., "Travel", "Food") (Analytics & Insights Service).
+
+4.  **Debt Simplification & Settlement (Balance & Settlement Service)**
+
+      * **Action**: User A uses the "Simplify Debts" feature within the group.
+      * **Verification**: The service returns a single payment instruction: User B pays User A $250.
+      * **Action**: User B records a manual cash payment of $250 to User A.
+      * **Verification**: The payment is recorded, and User A receives a notification (Notification Service). The group balance for both users is now $0.
+
+5.  **AI-Powered Insights (AI Service)**
+
+      * **Action**: User A uses the FinShare Co-Pilot and asks, "Create a budget for a 5-day trip to Paris for two people."
+      * [cite\_start]**Verification**: The AI Service contacts the Gemini API and returns a structured, itemized budget[cite: 156].
+
+### **Mock Data for Testing**
+
+#### **Users (`users` collection)**
+
+| userId (Document ID) | phoneNumber | displayName | email | profileImageUrl |
+| :--- | :--- | :--- | :--- | :--- |
+| `uid-user-alice` | "+15551112222" | "Alice Johnson" | "alice.j@email.com" | "[http://example.com/alice.jpg](https://www.google.com/search?q=http://example.com/alice.jpg)" |
+| `uid-user-bob` | "+15553334444" | "Bob Williams" | "bob.w@email.com" | "[http://example.com/bob.jpg](https://www.google.com/search?q=http://example.com/bob.jpg)" |
+| `uid-user-charlie`| "+15555556666" | "Charlie Brown" | "charlie.b@email.com" | "[http://example.com/charlie.jpg](https://www.google.com/search?q=http://example.com/charlie.jpg)"|
+
+#### **Group (`groups` collection)**
+
+  * **Document ID**: `gid-alps-trip`
+  * **Fields**:
+      * `groupName`: "Trip to the Alps"
+      * `memberIds`: [`"uid-user-alice"`, `"uid-user-bob"`, `"uid-user-charlie"`]
+      * `groupImageUrl`: "[http://example.com/alps.jpg](https://www.google.com/search?q=http://example.com/alps.jpg)"
+
+#### **Expenses (`expenses` collection)**
+
+1.  **Equal Split**
+
+      * **Request DTO (`CreateExpenseDto`)**:
+        ```json
+        {
+          "description": "Ski Passes",
+          "amount": 600,
+          "category": "Entertainment",
+          "paidBy": { "userId": "uid-user-alice", "amount": 600 },
+          "split": {
+            "method": "EQUAL",
+            "details": {}
+          },
+          "isRecurring": false
+        }
+        ```
+
+2.  **Exact Amount Split**
+
+      * **Request DTO (`CreateExpenseDto`)**:
+        ```json
+        {
+          "description": "Dinner",
+          "amount": 120,
+          "category": "Food & Drink",
+          "paidBy": { "userId": "uid-user-bob", "amount": 120 },
+          "split": {
+            "method": "EXACT",
+            "details": {
+              "uid-user-alice": 40,
+              "uid-user-bob": 60,
+              "uid-user-charlie": 20
+            }
+          },
+          "isRecurring": false
+        }
+        ```
+
+3.  **Percentage Split**
+
+      * **Request DTO (`CreateExpenseDto`)**:
+        ```json
+        {
+          "description": "Rental Car",
+          "amount": 500,
+          "category": "Transportation",
+          "paidBy": { "userId": "uid-user-charlie", "amount": 500 },
+          "split": {
+            "method": "PERCENTAGE",
+            "details": {
+              "uid-user-alice": 40,
+              "uid-user-bob": 40,
+              "uid-user-charlie": 20
+            }
+          },
+          "isRecurring": false
+        }
+        ```
+
+#### **Budgets (`budgets` collection)**
+
+  * **User**: `uid-user-alice`
+  * **Document 1**:
+      * **budgetId**: `bid-alice-food`
+      * `category`: "Food & Drink"
+      * `amount`: 400
+      * `period`: "MONTHLY"
+  * **Document 2**:
+      * **budgetId**: `bid-alice-transport`
+      * `category`: "Transportation"
+      * `amount`: 150
+      * `period`: "MONTHLY"

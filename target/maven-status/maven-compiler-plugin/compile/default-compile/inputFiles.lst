@@ -1,6 +1,7 @@
 /home/runner/workspace/src/main/java/com/finshare/gateway/controller/HealthController.java
 /home/runner/workspace/src/main/java/com/finshare/gateway/service/ProxyService.java
 /home/runner/workspace/src/main/java/com/finshare/gateway/ApiGatewayApplication.java
+/home/runner/workspace/src/main/java/com/finshare/gateway/controller/WebController.java
 /home/runner/workspace/src/main/java/com/finshare/gateway/filter/JwtAuthenticationFilter.java
 /home/runner/workspace/src/main/java/com/finshare/gateway/model/ApiError.java
 /home/runner/workspace/src/main/java/com/finshare/gateway/controller/GatewayController.java
