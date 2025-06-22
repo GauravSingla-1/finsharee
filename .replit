@@ -36,6 +36,10 @@ args = "AI Service"
 task = "workflow.run"
 args = "Analytics Insights Service"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Notification Service"
+
 [[workflows.workflow]]
 name = "FinShare API Gateway"
 author = "agent"
@@ -90,6 +94,15 @@ task = "shell.exec"
 args = "cd analytics-insights-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8005\""
 waitForPort = 8005
 
+[[workflows.workflow]]
+name = "Notification Service"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd notification-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8006\""
+waitForPort = 8006
+
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
 
@@ -120,3 +133,7 @@ externalPort = 3003
 [[ports]]
 localPort = 8005
 externalPort = 5000
+
+[[ports]]
+localPort = 8006
+externalPort = 5173

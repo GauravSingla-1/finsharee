@@ -1,0 +1,49 @@
+ The Messenger: Notification Service
+
+This is a lightweight, asynchronous service whose sole purpose is to handle all user-facing push notifications in a decoupled and scalable manner.
+
+8.1 High-Level Responsibilities
+
+Event Consumption: Subscribes to various event topics on Google Cloud Pub/Sub, such as new_expense_notification, settlement_notification, and budget_alert.
+Message Formatting: Constructs clear, user-friendly notification payloads based on the type of event and its associated data.
+Push Notification Delivery: Integrates with Firebase Cloud Messaging (FCM) to reliably deliver push notifications to the correct user devices.
+
+8.2 Low-Level Design
+
+The service will be implemented using Spring Boot and the Spring Cloud GCP Pub/Sub Starter, which provides robust abstractions for consuming messages from Pub/Sub.5
+Multiple services within the FinShare ecosystem will need to trigger notifications. Embedding FCM integration logic into each of those services would create tight coupling, code duplication, and maintenance overhead. This would violate the Single Responsibility Principle, as the Group & Expense Service, for example, should not be concerned with the formatting of a push notification.3
+A superior architectural pattern is to create a centralized, generic Notification Service. All other services in the system become "event producers." For instance, when a new expense is added, the Group & Expense Service simply publishes a structured event to a notifications.push topic on Pub/Sub. The Notification Service is the sole "event consumer" for this topic. It is designed as a simple, stateless worker whose only job is to:
+Receive a structured event from the Pub/Sub subscription.
+Parse the event payload (e.g., { eventType: 'NEW_EXPENSE', fromUserId: 'uid-john', toUserId: 'uid-jane', groupName: 'Europe Trip', amount: 50.00 }).
+If necessary, call the User Service to resolve user IDs to display names or to fetch the recipient's FCM device token.
+Construct the final, human-readable notification message (e.g., "John Smith added a $50.00 expense to 'Europe Trip'").
+Send the formatted message to the recipient via the Firebase Cloud Messaging API.
+This design completely decouples the business logic services from the implementation details of sending notifications. If the product later requires adding email or in-app notifications, only the Notification Service needs to be modified. This pattern is highly scalable, maintainable, and resilient.
+
+8.3 Consumed Events Contract
+
+This service does not expose a public REST API. Instead, it subscribes to topics in Google Cloud Pub/Sub. Its "API" is the contract of the event payloads it consumes.
+
+Event Type
+Pub/Sub Topic Name
+Event Payload Schema (JSON)
+Description
+New Expense Added
+finshare.events.expenses
+{ "eventType": "NEW_EXPENSE", "expenseId": string, "groupId": string, "groupName": string, "addedByUserId": string, "amount": number, "description": string, "involvedUserIds": string }
+Published by the Group & Expense Service. Triggers a notification to all involvedUserIds (except the user who added it) about the new expense.
+Payment Recorded
+finshare.events.settlements
+{ "eventType": "PAYMENT_RECORDED", "groupId": string, "fromUserId": string, "toUserId": string, "amount": number }
+Published by the Balance & Settlement Service. Triggers a notification to the toUserId informing them that the fromUserId has recorded a payment.
+Budget Alert
+finshare.events.analytics
+{ "eventType": "BUDGET_ALERT", "userId": string, "category": string, "percentage": number, "budgetId": string }
+Published by the Analytics & Insights Service. Triggers a notification to the userId warning them that they have reached a certain percentage of their budget for a category.
+
+
+8.4 Testing Plan
+
+Unit Testing: Test the message formatting logic for each event type. Given a sample event payload, verify that the correct human-readable notification string is generated. Mock the FCM client and User Service client.
+Integration Testing: Use a test implementation of the Pub/Sub binder (e.g., spring-cloud-stream-test-binder) to send mock events to the service's consumer function. Verify that the service attempts to call the mocked FCM client with the correctly formatted payload.
+E2E Testing: In a staging environment, perform an action that triggers a notification (e.g., add an expense). Verify that a real push notification is received on a test device.
