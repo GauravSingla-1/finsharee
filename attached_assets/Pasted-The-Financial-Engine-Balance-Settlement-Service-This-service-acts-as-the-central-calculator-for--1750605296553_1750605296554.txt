@@ -1,0 +1,60 @@
+The Financial Engine: Balance & Settlement Service
+
+This service acts as the central calculator for the application, responsible for all financial computations, including real-time balance lookups, complex debt simplification, and the facilitation of settlements between users.
+
+5.1 High-Level Responsibilities
+
+Balance Calculation: Computes the net financial position for a user, either within a specific group or across all of their groups, providing a clear summary of who owes whom.
+Debt Simplification: Implements the "Simplify Debts" algorithm, a core feature that reduces a complex web of IOUs into the minimum number of payments required to settle all balances within a group.1
+Settlement Facilitation: Generates pre-filled deep links for trusted, third-party payment applications (e.g., GPay, PayPal) to provide a seamless and secure settlement experience.1
+Payment Recording: Provides an endpoint to record payments made outside the app (e.g., in cash), ensuring that balances in FinShare remain accurate and up-to-date.
+
+5.2 Low-Level Design
+
+The service will be implemented using Spring Boot. It primarily functions as a computational service, reading data from the transactions collection (owned by the Group & Expense Service) to perform its calculations. It may use Redis to cache frequently requested balance summaries for performance.
+The "Simplify Debts" feature provides significant user value by untangling what can be a confusing network of IOUs (e.g., A owes B, B owes C, and C owes A) into a simple, actionable payment plan.1 This is fundamentally a graph reduction problem, not a simple summation. The implementation will follow a well-established and optimal algorithm to solve this 25:
+Step 1: Calculate Net Balances. For a given group, the service first queries all unsettled transaction documents. It then iterates through this list to compute a single net balance for every member of the group. The formula for each user is:balanceuser​=∑(amount_owed_to_user)−∑(amount_owed_by_user)
+Step 2: Partition Users. Once all balances are calculated, the service partitions the users into two distinct sets: creditors (users with a positive balance, who are owed money) and debtors (users with a negative balance, who owe money).
+Step 3: Generate Minimum Transactions. The service then employs a greedy algorithm to systematically match debtors with creditors. It generates a list of simplified payment instructions (e.g., {from: debtor_A, to: creditor_X, amount: 10.00}) and adjusts their balances accordingly. This process continues iteratively until all balances in both sets are reduced to zero. This algorithm is guaranteed to produce the minimum possible number of transactions (at most n−1 transactions, where n is the number of people with non-zero balances), directly fulfilling the user requirement.25
+For settlements, when a user taps "Settle Up," this service will generate a platform-specific deep link (e.g., gpay://pay?pa={upi_id}&pn={name}&am={amount}). This strategy deliberately avoids the immense trust, security, and regulatory burdens of building a proprietary payment system, a key lesson learned from the PRD's analysis of Splitwise's dysfunctional "Splitwise Pay" feature.1
+
+5.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/balances/me
+GET
+(none)
+OverallBalanceDto
+Fetches all unsettled transaction documents from Firestore where the authenticated user is either the fromUser or toUser. Calculates their total net balance across all groups.
+/api/groups/{groupId}/balances
+GET
+(none)
+GroupBalanceDto
+Fetches all unsettled transaction documents for the specified groupId. Calculates the net balance for every member within that group.
+/api/groups/{groupId}/simplified-debts
+GET
+(none)
+SimplifiedDebtsDto
+Executes the debt simplification algorithm described in the low-level design for the specified group.
+/api/settlements/record
+POST
+RecordPaymentDto
+204 No Content
+Records a manual payment. Within a Firestore transaction, creates a new transaction of type settlement and updates the isSettled flag on the corresponding expense transaction documents. Publishes a payment_recorded event.
+
+Data Transfer Objects (DTOs):
+OverallBalanceDto: { "netBalance": number, "totalOwedToYou": number, "totalYouOwe": number }
+GroupBalanceDto: { "userBalances": { "userId": string, "balance": number }, "netBalanceForUser": number }
+SimplifiedDebtsDto: { "payments": { "fromUserId": string, "toUserId": string, "amount": number } }
+RecordPaymentDto: { "groupId": string, "toUserId": string, "amount": number }
+
+5.4 Testing Plan
+
+Unit Testing: Create extensive unit tests for the "Simplify Debts" algorithm. Test with various scenarios: simple debts, circular debts (A->B, B->C, C->A), and cases with multiple debtors and creditors to ensure the output is always the minimal number of transactions.
+Integration Testing: Use a Firestore emulator to test the balance calculation logic against a pre-populated set of transaction documents. Verify that recording a payment correctly updates the isSettled flags on the right documents.
+E2E Testing: Test the full settlement flow: create debts, simplify them, record a manual payment, and verify that the group balances are correctly updated to zero.
