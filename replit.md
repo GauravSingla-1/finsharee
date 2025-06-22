@@ -13,7 +13,7 @@ The application follows a distributed microservices pattern with:
 - **Group Expense Service** (Port 8002) - Core group and expense management
 - **Balance Settlement Service** (Port 8003) - Debt calculation and settlement
 - **AI Service** (Port 8004) - Expense categorization and insights
-- **Analytics Insights Service** (Port 8005) - Reporting and analytics
+- **Analytics Insights Service** (Port 8005) - Dashboard data aggregation and budget management
 
 ### Technology Stack
 - **Backend**: Java 17 with Spring Boot 3.2.0
@@ -114,3 +114,4 @@ Preferred communication style: Simple, everyday language.
 
 Changelog:
 - June 22, 2025. Initial setup
+- June 22, 2025. Successfully migrated from Replit Agent to standard Replit environment. Added missing Analytics Insights Service with Redis integration for dashboard data aggregation and budget management. All 6 microservices now running on ports 5000-8005.

@@ -2,7 +2,7 @@ modules = ["java-graalvm22.3", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["libxcrypt", "maven"]
+packages = ["libxcrypt", "maven", "redis"]
 
 [workflows]
 runButton = "Project"
@@ -31,6 +31,10 @@ args = "Balance Settlement Service"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "AI Service"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Analytics Insights Service"
 
 [[workflows.workflow]]
 name = "FinShare API Gateway"
@@ -77,12 +81,25 @@ task = "shell.exec"
 args = "cd ai-service && python main.py"
 waitForPort = 8004
 
+[[workflows.workflow]]
+name = "Analytics Insights Service"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd analytics-insights-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8005\""
+waitForPort = 8005
+
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 6379
+externalPort = 4200
 
 [[ports]]
 localPort = 8001
@@ -99,3 +116,7 @@ externalPort = 3002
 [[ports]]
 localPort = 8004
 externalPort = 3003
+
+[[ports]]
+localPort = 8005
+externalPort = 5000

@@ -1,0 +1,65 @@
+ The Insight Engine: Analytics & Insights Service
+
+This service is responsible for processing raw financial data and transforming it into the visually engaging and actionable insights presented on the user's dashboard.
+
+7.1 High-Level Responsibilities
+
+Dashboard Data Aggregation: Provides the pre-aggregated data required to render the visual spending summaries (e.g., pie charts, bar charts) on the main dashboard, enabling at-a-glance financial awareness.1
+Budget Management: Manages the lifecycle of user-defined, category-based budgets, including their creation, modification, and tracking of spending against them.1
+Alert Generation: Monitors user spending against their set budgets and triggers alerts when predefined thresholds (e.g., 75%, 90%) are crossed.
+
+7.2 Low-Level Design
+
+The service will be implemented using Spring Boot and will rely heavily on Redis for high-performance caching and real-time aggregation.10
+The main dashboard must load almost instantaneously to provide a good user experience, a key non-functional requirement.1 Querying and aggregating all of a user's transactions for the month from Firestore every time they open the app would be far too slow and cost-prohibitive in terms of database reads. While a simple caching strategy could store the result of the first slow query, a more sophisticated, event-driven pattern will be employed to use Redis as a pre-computation engine rather than a simple cache.28
+The Analytics & Insights Service will subscribe to the expense_created, expense_updated, and expense_deleted event topics on Google Cloud Pub/Sub.
+When an event is received, instead of merely invalidating a cache key, the service will perform a direct, atomic, and incremental update on a pre-aggregated data structure stored in a Redis Hash.
+For example, upon receiving an event for a new $50 expense in the "Food" category for user user123 in June 2025, the service will execute the Redis command: HINCRBYFLOAT user123:dashboard:2025-06 Food 50.00. If an expense is deleted, it will use a negative value to decrement the total.
+When the client application requests the dashboard data, the Analytics Service's API endpoint simply needs to execute a single HGETALL user123:dashboard:2025-06 command against Redis. This is an extremely fast O(N) operation where N is the number of spending categories (a small number), not the total number of transactions for the month. This design ensures that the dashboard data is always up-to-date and can be served with minimal latency, effectively using Redis as a real-time materialized view of the user's spending.
+For budget alerts, a scheduled job will periodically compare the spending totals stored in the Redis hashes against the user-defined budgets stored in Firestore. If a spending threshold is crossed, the job will publish a budget_alert event to a Pub/Sub topic, which will be consumed by the Notification Service.
+
+7.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/analytics/dashboard
+GET
+Query Params: month, year
+DashboardDto
+Fetches pre-aggregated spending data for the specified month from the Redis Hash (e.g., HGETALL userId:dashboard:YYYY-MM). Returns the data formatted for chart display.
+/api/budgets
+POST
+CreateBudgetDto
+201 Created, BudgetDto
+Creates a new budget document in Firestore for the authenticated user.
+/api/budgets
+GET
+(none)
+List<BudgetDto>
+Retrieves all budget documents associated with the authenticated user from Firestore.
+/api/budgets/{budgetId}
+PUT
+UpdateBudgetDto
+200 OK, BudgetDto
+Updates the specified budget document in Firestore.
+/api/budgets/{budgetId}
+DELETE
+(none)
+204 No Content
+Deletes the specified budget document from Firestore.
+
+Data Transfer Objects (DTOs):
+DashboardDto: { "spendingByCategory": { "category": string, "amount": number }, "totalSpend": number }
+CreateBudgetDto: { "category": string, "amount": number, "period": "MONTHLY" | "WEEKLY" }
+UpdateBudgetDto: { "amount": number }
+BudgetDto: { "budgetId": string, "category": string, "amount": number, "period": string, "currentSpending": number }
+
+7.4 Testing Plan
+
+Unit Testing: Test the logic of the Pub/Sub event consumer that updates Redis. Simulate different event types (expense_created, expense_deleted) and verify that the correct Redis commands (HINCRBYFLOAT) are generated. Test the budget alert scheduler logic.
+Integration Testing: Use an embedded Redis server (e.g., from the it.ozimov:embedded-redis library) and a Firestore emulator. Publish mock events to a test Pub/Sub topic and verify that the data in the embedded Redis instance is updated correctly. Test the /api/analytics/dashboard endpoint to ensure it reads correctly from Redis.
+E2E Testing: Create an expense, then immediately hit the dashboard endpoint to verify that the real-time aggregation pipeline is working correctly and the dashboard reflects the new expense.
