@@ -1,0 +1,62 @@
+ The Front Door: API Gateway Service
+
+This service acts as the single, unified entry point for all requests originating from the FinShare Android client. It is a critical component responsible for routing, enforcing security policies, and abstracting the internal service topology from the outside world.
+
+2.1 High-Level Responsibilities
+
+Request Routing: The gateway's primary function is to route incoming HTTP requests to the appropriate downstream microservice. This routing is based on the request path, for example, forwarding requests to /api/users/** to the User Service and requests to /api/groups/** to the Group & Expense Service.
+Authentication & Authorization: It serves as the primary security gatekeeper for the entire backend system. It will intercept every incoming request, validate the user's JSON Web Token (JWT), and promptly reject any unauthenticated or unauthorized attempts to access the system.
+Cross-Cutting Concerns: The gateway handles concerns that are common to all services, such as rate limiting (to prevent denial-of-service attacks and abuse), centralized request/response logging for observability, and CORS (Cross-Origin Resource Sharing) configuration. This adheres to the best practice of offloading such responsibilities from the individual business logic services, keeping them lean and focused.3
+
+2.2 Low-Level Design
+
+The API Gateway will be implemented using Spring Cloud Gateway, a mature and powerful framework for building API gateways on the JVM. Its design centers on creating a robust security "choke point" that builds trust by simplifying and hardening the system's security posture.
+By designing the API Gateway as the sole publicly exposed endpoint and making it responsible for all authentication, a single, defensible perimeter is established. This design is a canonical example of offloading cross-cutting concerns, as advocated by microservice best practices.3 This centralization has a powerful simplifying effect on all internal services. A developer working on the
+Group & Expense Service, for example, does not need to implement any complex JWT validation logic. They can operate under the trusted assumption that if a request reaches their service, it has already been authenticated by the gateway. The authenticated user's unique ID will be present and verified in a secure internal header. This approach not only reduces code duplication and the potential for security vulnerabilities but also fosters a "zero-trust" internal network where services rely on the gateway's verification rather than trusting each other's security implementations. This directly contributes to the "Trust Through Transparency" product pillar by making the system's security posture more robust, consistent, and auditable.1
+The authentication flow will proceed as follows:
+The FinShare Android client, after a user successfully signs in using the Firebase SDK, obtains a JWT ID token.13
+The client application must include this token in the Authorization: Bearer <token> header for all subsequent API calls to the backend.20
+The API Gateway is configured with a custom global filter that intercepts every request before it is routed.
+This filter is responsible for validating the JWT. It will be configured with the Firebase issuer URI (https://securetoken.google.com/<YOUR-PROJECT-ID>) and the JWKS URI for Google's public signing keys (https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com), as detailed in the official documentation.6 The gateway will fetch and cache these keys to perform the validation efficiently.
+If the token's signature and claims (such as issuer and expiration) are valid, the gateway extracts the user's unique identifier (uid) from the token payload.
+The gateway then forwards the request to the appropriate downstream service. Crucially, it injects the authenticated user's ID into a secure, internal-only header, such as X-Authenticated-User-ID. Downstream services are configured to trust this header as the definitive source of the user's identity.
+If the token is invalid, expired, or missing, the gateway immediately terminates the request and returns a 401 Unauthorized HTTP status code to the client, preventing the unauthenticated request from ever reaching the internal network.
+
+2.3 API Routing Rules
+
+The gateway's configuration will define routing predicates based on request paths to direct traffic to the correct internal service.
+
+Path Prefix
+Target Service
+Description
+/api/users/**
+User Service
+Routes all user profile and search requests.
+/api/groups/**
+Group & Expense Service
+Routes all group management requests.
+/api/expenses/**
+Group & Expense Service
+Routes all expense management requests.
+/api/balances/**
+Balance & Settlement Service
+Routes all balance calculation requests.
+/api/settlements/**
+Balance & Settlement Service
+Routes all settlement-related requests.
+/api/ai/**
+AI Service
+Routes all AI and Co-Pilot requests.
+/api/analytics/**
+Analytics & Insights Service
+Routes all analytics and dashboard requests.
+/api/budgets/**
+Analytics & Insights Service
+Routes all budget management requests.
+
+
+2.4 Testing Plan
+
+Unit Testing: Test individual routing predicate factories and gateway filters in isolation. Mock downstream services to verify that requests are routed correctly based on path and method.
+Integration Testing: Use WebTestClient to test the gateway's behavior in a running Spring context. Write tests to verify that the JWT authentication filter correctly validates tokens and rejects invalid ones. Test rate-limiting configurations.
+End-to-End (E2E) Testing: As part of the full application E2E suite, all tests will pass through the gateway. This will validate that the deployed gateway correctly routes traffic to live downstream services in a staging environment.
