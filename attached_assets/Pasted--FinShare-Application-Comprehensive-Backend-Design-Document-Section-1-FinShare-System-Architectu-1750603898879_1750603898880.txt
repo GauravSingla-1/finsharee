@@ -1,0 +1,706 @@
+
+FinShare Application: Comprehensive Backend Design Document
+
+
+Section 1: FinShare System Architecture: A Strategic Overview
+
+This section establishes the high-level architectural vision for FinShare, outlining the core principles, technology stack, and the interplay between services. It serves as the strategic foundation upon which the detailed service designs are built.
+
+1.1 Architectural Vision and Core Principles
+
+The backend architecture for FinShare is engineered to be scalable, resilient, and secure, directly supporting the product's vision of being an intuitive and intelligent financial hub.1 The design is predicated on a microservices-based approach, guided by several core principles that ensure long-term maintainability and the ability to rapidly evolve features.
+Domain-Driven Design (DDD): The system is partitioned into services based on distinct business capabilities, not technical layers. Services such as User Management, Expense Splitting, and Financial Insights are modeled around the core business domains identified in the Product Requirements Document (PRD).1 This DDD approach fosters high cohesion within services and loose coupling between them, which is a foundational best practice for microservices.3 This structure empowers small, autonomous teams to develop, deploy, and scale their respective services independently, accelerating the development lifecycle.
+Decentralized Data Management: Each microservice is the single source of truth for its domain's data. It owns and manages its own database or collection schema, a principle that is critical for true service independence.3 For instance, the
+User Service will have exclusive write access to the users collection in Firestore. No other service is permitted to modify this data directly; they must interact via the User Service's well-defined API. This strategy prevents the tight coupling, data integrity issues, and single points of failure commonly associated with monolithic, shared databases.
+Asynchronous, Event-Driven Communication: To enhance system resilience and scalability, inter-service communication for non-blocking operations will be primarily asynchronous. By leveraging a robust message broker like Google Cloud Pub/Sub, critical events such as expense_created or user_categorization_corrected can be broadcast without requiring the originating service to wait for a response.5 This pattern avoids the creation of long, brittle chains of synchronous API calls, which are prone to latency issues and cascading failures in a distributed system.3
+Security by Design: Security is not an afterthought but a foundational component woven into every layer of the architecture. The design incorporates security from the outermost layer—a hardened API Gateway validating every request—to the innermost data privacy controls within the AI services. This comprehensive approach directly supports the "Trust Through Transparency" product pillar defined in the PRD, ensuring user data is protected and handled with integrity.1
+
+1.2 High-Level System Context Diagram
+
+A system context diagram would depict the FinShare system as a single, central entity, illustrating its interactions with key external actors and systems. On one side, the primary actor is the FinShare Android Client, which communicates with the system's backend via a single, secure API Gateway. The system also interacts with several external services that are crucial for its functionality: Firebase Authentication for user identity management, various Third-Party Payment Apps (e.g., GPay, PayPal) for debt settlement via deep links, and the Google Gemini API to power the advanced Co-Pilot features. This high-level view clarifies the system's boundaries and its primary dependencies within its operational ecosystem.
+
+1.3 Definitive Technology Stack
+
+The technology stack for FinShare is a strategic selection of tools and frameworks chosen to meet the specific functional and non-functional requirements outlined in the PRD.1 The architecture embraces a polyglot approach, recognizing that a single technology is insufficient to optimally address the diverse challenges of the application, from transactional business logic to high-performance machine learning inference.
+The application's requirements are multifaceted. The PRD calls for standard, robust business logic for managing users and expenses, but also for specialized, computationally distinct tasks like serving an ML model for expense categorization.1 Microservice best practices explicitly endorse polyglot programming, which allows teams to select the most appropriate tool for each specific job.3
+For the core business logic services (User, Group, Expense), the maturity, strong typing, and extensive ecosystem of Java 17 and the Spring Boot 3 framework provide an ideal foundation for building scalable and maintainable REST APIs.6 Conversely, for the AI/ML model serving component, the Python ecosystem is the undisputed leader.
+Python 3 with the FastAPI framework is a lightweight, high-performance solution purpose-built for creating ML APIs, making it the superior choice for the AI Service.8 This polyglot persistence extends to data storage;
+Cloud Firestore is perfectly suited for the document-centric, scalable data of users and expenses, while Redis offers the high-performance, in-memory capabilities needed for the analytics dashboard's aggregated counters.11 Therefore, this polyglot architecture is a deliberate strategic decision to optimize for performance, developer productivity, and scalability across the system's various domains.
+Component
+Primary Technology
+Rationale & Key Requirements
+Client Entry Point
+Spring Cloud Gateway
+Provides centralized routing, rate limiting, and offloads JWT authentication from downstream services, creating a secure perimeter.4
+Core Business Logic
+Spring Boot 3 & Java 17
+A robust, scalable, and widely-supported framework for building the core REST APIs and business logic for users, groups, and expenses.6
+Primary Data Store
+Google Cloud Firestore
+A serverless, scalable NoSQL database with a flexible document model and built-in offline support for the client, a key NFR.1
+Authentication
+Firebase Authentication
+A fully managed service providing secure Phone (OTP) and Google Sign-In, fulfilling core user onboarding requirements from the PRD.1
+AI Model Serving
+Python 3 & FastAPI
+A high-performance, modern framework ideal for serving the expense categorization machine learning model with low latency.8
+Generative AI
+Google Gemini API
+Powers the FinShare Co-Pilot features, including the Intelligent Trip Budgeter and Personalized Budgeting Assistant.1
+Caching & Analytics
+Redis
+A high-performance, in-memory data store used for caching frequently accessed data and pre-computing dashboard analytics for instant load times.10
+Asynchronous Messaging
+Google Cloud Pub/Sub
+Decouples services through a reliable, event-driven architecture, used for notifications and the AI model's autotraining feedback loop.5
+Containerization
+Docker
+Standardizes the packaging of all microservices (both Java and Python) into portable containers for consistent development and deployment.6
+Orchestration
+Kubernetes
+Manages the deployment, scaling, health, and operation of the containerized services in production environments.17
+
+
+Section 2: The Front Door: API Gateway Service
+
+This service acts as the single, unified entry point for all requests originating from the FinShare Android client. It is a critical component responsible for routing, enforcing security policies, and abstracting the internal service topology from the outside world.
+
+2.1 High-Level Responsibilities
+
+Request Routing: The gateway's primary function is to route incoming HTTP requests to the appropriate downstream microservice. This routing is based on the request path, for example, forwarding requests to /api/users/** to the User Service and requests to /api/groups/** to the Group & Expense Service.
+Authentication & Authorization: It serves as the primary security gatekeeper for the entire backend system. It will intercept every incoming request, validate the user's JSON Web Token (JWT), and promptly reject any unauthenticated or unauthorized attempts to access the system.
+Cross-Cutting Concerns: The gateway handles concerns that are common to all services, such as rate limiting (to prevent denial-of-service attacks and abuse), centralized request/response logging for observability, and CORS (Cross-Origin Resource Sharing) configuration. This adheres to the best practice of offloading such responsibilities from the individual business logic services, keeping them lean and focused.3
+
+2.2 Low-Level Design
+
+The API Gateway will be implemented using Spring Cloud Gateway, a mature and powerful framework for building API gateways on the JVM. Its design centers on creating a robust security "choke point" that builds trust by simplifying and hardening the system's security posture.
+By designing the API Gateway as the sole publicly exposed endpoint and making it responsible for all authentication, a single, defensible perimeter is established. This design is a canonical example of offloading cross-cutting concerns, as advocated by microservice best practices.3 This centralization has a powerful simplifying effect on all internal services. A developer working on the
+Group & Expense Service, for example, does not need to implement any complex JWT validation logic. They can operate under the trusted assumption that if a request reaches their service, it has already been authenticated by the gateway. The authenticated user's unique ID will be present and verified in a secure internal header. This approach not only reduces code duplication and the potential for security vulnerabilities but also fosters a "zero-trust" internal network where services rely on the gateway's verification rather than trusting each other's security implementations. This directly contributes to the "Trust Through Transparency" product pillar by making the system's security posture more robust, consistent, and auditable.1
+The authentication flow will proceed as follows:
+The FinShare Android client, after a user successfully signs in using the Firebase SDK, obtains a JWT ID token.13
+The client application must include this token in the Authorization: Bearer <token> header for all subsequent API calls to the backend.20
+The API Gateway is configured with a custom global filter that intercepts every request before it is routed.
+This filter is responsible for validating the JWT. It will be configured with the Firebase issuer URI (https://securetoken.google.com/<YOUR-PROJECT-ID>) and the JWKS URI for Google's public signing keys (https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com), as detailed in the official documentation.6 The gateway will fetch and cache these keys to perform the validation efficiently.
+If the token's signature and claims (such as issuer and expiration) are valid, the gateway extracts the user's unique identifier (uid) from the token payload.
+The gateway then forwards the request to the appropriate downstream service. Crucially, it injects the authenticated user's ID into a secure, internal-only header, such as X-Authenticated-User-ID. Downstream services are configured to trust this header as the definitive source of the user's identity.
+If the token is invalid, expired, or missing, the gateway immediately terminates the request and returns a 401 Unauthorized HTTP status code to the client, preventing the unauthenticated request from ever reaching the internal network.
+
+2.3 API Routing Rules
+
+The gateway's configuration will define routing predicates based on request paths to direct traffic to the correct internal service.
+
+Path Prefix
+Target Service
+Description
+/api/users/**
+User Service
+Routes all user profile and search requests.
+/api/groups/**
+Group & Expense Service
+Routes all group management requests.
+/api/expenses/**
+Group & Expense Service
+Routes all expense management requests.
+/api/balances/**
+Balance & Settlement Service
+Routes all balance calculation requests.
+/api/settlements/**
+Balance & Settlement Service
+Routes all settlement-related requests.
+/api/ai/**
+AI Service
+Routes all AI and Co-Pilot requests.
+/api/analytics/**
+Analytics & Insights Service
+Routes all analytics and dashboard requests.
+/api/budgets/**
+Analytics & Insights Service
+Routes all budget management requests.
+
+
+2.4 Testing Plan
+
+Unit Testing: Test individual routing predicate factories and gateway filters in isolation. Mock downstream services to verify that requests are routed correctly based on path and method.
+Integration Testing: Use WebTestClient to test the gateway's behavior in a running Spring context. Write tests to verify that the JWT authentication filter correctly validates tokens and rejects invalid ones. Test rate-limiting configurations.
+End-to-End (E2E) Testing: As part of the full application E2E suite, all tests will pass through the gateway. This will validate that the deployed gateway correctly routes traffic to live downstream services in a staging environment.
+
+Section 3: The Identity Foundation: User Service
+
+This service is the definitive authority for all user-related information. It manages the user's core profile and their identity within the FinShare social graph, which is essential for group-based features.
+
+3.1 High-Level Responsibilities
+
+User Lifecycle Management: Responsible for creating a user profile document in the database the first time a newly authenticated user accesses the system.
+Profile Management: Provides the necessary CRUD (Create, Read, Update, Delete) API endpoints for managing a user's profile data, including their displayName, profileImageUrl, and email, as specified in the user profile setup story.1
+User Discovery: Offers a mechanism for users to look up other users by their phone number, a critical function for inviting friends to groups and building the social network.
+
+3.2 Low-Level Design
+
+The User Service will be implemented using Spring Boot and will use Spring Data Firestore for its persistence layer.11
+The PRD requires that users signing up with a social provider like Google must also provide and verify a phone number.1 This is not merely for two-factor authentication; it is the strategic key to unlocking the app's social graph. This requirement leads to a "dual identity" model for each user: the system's internal, immutable primary key (
+userId from Firebase Authentication) and the user-facing, social identifier (phoneNumber).
+When a user wishes to add a friend to a group, their mental model is based on their phone's contact list. The application's UI will therefore allow them to search for friends using phone numbers. This search request is directed to the User Service's /api/users/search endpoint. The service acts as a resolver, taking the social identifier (phoneNumber) and returning the corresponding system identifier (userId). The client application then uses this resolved userId to make subsequent requests to the Group & Expense Service to add that friend to a group. This design elegantly decouples the user's intuitive social interaction model from the backend's more robust and private data relationship model. It allows the system to use stable, non-personally-identifiable UIDs for all internal data references (e.g., in the members array of a group document), which is superior for privacy and data integrity, while still providing the phone-based discovery experience users expect.
+Data Model (Firestore users collection):
+The service will manage a single collection named users.
+Document ID: The document ID will be the user's userId (the UID provided by Firebase Authentication). Using this non-sequential, randomly distributed key is a best practice that helps prevent "hotspotting" and ensures write scalability in Firestore.23
+Fields:
+phoneNumber: (String, Indexed) The user's verified phone number, which will be indexed for fast lookups during friend searches.
+displayName: (String) The user's full name.
+email: (String) The user's email address, typically sourced from Google Sign-In.
+profileImageUrl: (String) A URL pointing to the user's profile picture.
+createdAt: (Timestamp) The timestamp of when the user profile was created.
+Internal Logic:
+User Creation: User profiles are provisioned on a "just-in-time" basis. The creation process is not triggered directly by a client call but is initiated internally when the service receives a request from a user for whom no profile exists. The service will check for the existence of a document with the X-Authenticated-User-ID and, if not found, will create one.
+Phone Number Uniqueness: Before creating a new user profile, the service must perform a query on the users collection to ensure the provided phoneNumber is not already associated with another account, enforcing uniqueness at the application layer.
+
+3.3 API Contract
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success 200)
+Detailed Logic
+/api/users/me
+GET
+(none)
+UserDto
+Fetches the Firestore document from the users collection where the document ID matches the X-Authenticated-User-ID header. If the document doesn't exist, it creates a new profile stub before returning.
+/api/users/me
+PUT
+UpdateUserDto
+UserDto
+Updates the authenticated user's profile. Fetches the user document, applies the changes from the DTO (displayName, profileImageUrl), and saves it back to Firestore. Returns the updated user profile.
+/api/users/search
+GET
+Query Param: phone
+SearchedUserDto
+Queries the users collection on the indexed phoneNumber field. For privacy, returns a simplified DTO containing only non-sensitive, publicly identifiable information needed to add a user to a group.
+
+Data Transfer Objects (DTOs):
+UserDto: { "userId": string, "phoneNumber": string, "displayName": string, "email": string, "profileImageUrl": string, "createdAt": timestamp }
+UpdateUserDto: { "displayName": string, "profileImageUrl": string } (All fields are optional)
+SearchedUserDto: { "userId": string, "displayName": string, "profileImageUrl": string }
+
+3.4 Testing Plan
+
+Unit Testing: Test the service layer logic, such as the just-in-time user creation and the mapping between domain objects and DTOs. Mock the Firestore repository to test business logic in isolation.
+Integration Testing: Use @SpringBootTest with an in-memory Firestore emulator (like the one provided by the Firebase Test SDK) to test the full repository and service layers. Use MockMvc to test the controller layer, verifying API contracts, request validation, and correct HTTP status codes.
+E2E Testing: Test the user profile creation and update flows from the client application against a deployed instance of the User Service.
+
+Section 4: The Core Logic: Group & Expense Service
+
+This service is the functional core of the FinShare application. It encapsulates all the complex business logic related to creating and managing groups, logging expenses, and calculating splits.
+
+4.1 High-Level Responsibilities
+
+Group Management: Provides full CRUD functionality for groups, including creating new groups, inviting and removing members, and updating group metadata like its name or image.
+Expense Management: Implements the complete suite of expense management features detailed in the PRD.1 This includes quick expense addition, a variety of flexible splitting methods (equally, by exact amounts, by percentage, by shares), advanced receipt itemization using OCR, support for expenses paid by multiple people, and the automated creation of recurring expenses.
+Transactional Integrity: Guarantees that all financial operations are atomic. This is non-negotiable for a financial application, as it prevents data corruption and ensures that user balances are always accurate and consistent.
+
+4.2 Low-Level Design
+
+This service will be implemented using Spring Boot and Spring Data Firestore.
+A single financial action, such as adding a complex, multi-payer expense, can result in numerous database writes: one for the primary expense document and potentially dozens of individual transaction documents representing the resulting IOUs for each group member. The PRD outlines these complex scenarios, and an error during this multi-write process could leave the group's financial state corrupt and inconsistent, fundamentally violating the product's "Trust" pillar.1 The non-functional requirements explicitly mandate data integrity and atomic operations to prevent this.1
+Firestore's support for atomic batch writes and transactions provides the direct technical solution to this critical requirement.1 The logic for creating or updating an expense will be wrapped in a single Firestore
+runTransaction block. Within this atomic operation, the service will perform all necessary database modifications:
+Create or update the main expense document.
+Calculate the financial obligations for each member based on the specified splitting method.
+Create or update all the corresponding transaction documents that represent the individual debts between users.
+If any of these writes fail for any reason, Firestore's transaction mechanism ensures that the entire operation is automatically rolled back. This guarantees that the database is never left in a partial or inconsistent state, thereby upholding the integrity of the financial records.24
+Recurring Expenses Logic:
+To handle recurring expenses like monthly rent, a scheduled job (implemented with Spring's @Scheduled annotation or a cloud-native scheduler like Google Cloud Scheduler) will execute periodically (e.g., daily). This job will query the expenses collection for all documents marked as recurring (isRecurring: true) and where the nextDueDate matches the current date. For each matching template, it will generate a new concrete expense instance in the group and then update the template's nextDueDate to the next recurrence date.
+
+4.3 API Contracts
+
+
+Group Management APIs
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/groups
+POST
+CreateGroupDto
+201 Created, GroupDto
+Creates a new document in the groups collection. The authenticated user is automatically added as the first member. Calls the User Service to resolve any additional memberPhoneNumbers to userIds and adds them to the members array.
+/api/groups/{groupId}
+GET
+(none)
+GroupDetailDto
+Fetches the group document by its ID. Verifies that the authenticated user is a member of the group. Populates member details by calling the User Service.
+/api/groups/{groupId}/members
+POST
+AddMemberDto
+200 OK, GroupDto
+Adds a new member to an existing group. Calls the User Service to resolve the userPhoneNumber to a userId. Atomically adds the userId to the members array in the group document.
+
+
+Expense Management APIs
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/groups/{groupId}/expenses
+POST
+CreateExpenseDto
+201 Created, ExpenseDto
+Core Transactional Logic. Within a Firestore transaction: 1. Creates the expense document. 2. Calculates debts based on splitMethod. 3. Creates corresponding transaction documents for each IOU. 4. Publishes a new_expense_added event to Pub/Sub.
+/api/expenses/{expenseId}
+PUT
+UpdateExpenseDto
+200 OK, ExpenseDto
+Updates an existing expense. Uses a Firestore transaction to update the expense document and recalculate/update all associated transaction documents to ensure consistency.
+/api/expenses/{expenseId}
+DELETE
+(none)
+204 No Content
+Deletes an expense and all of its associated transaction documents within a single atomic Firestore transaction.
+/api/groups/{groupId}/expenses
+GET
+(none)
+List<ExpenseDto>
+Fetches a list of all expenses associated with the given groupId.
+
+Data Transfer Objects (DTOs):
+CreateGroupDto: { "groupName": string, "groupImageUrl": string (optional), "memberPhoneNumbers": string (optional) }
+GroupDto: { "groupId": string, "groupName": string, "groupImageUrl": string, "memberIds": string }
+GroupDetailDto: Extends GroupDto with { "members": SearchedUserDto }
+AddMemberDto: { "userPhoneNumber": string }
+CreateExpenseDto: { "description": string, "amount": number, "category": string, "paidBy": { "userId": string, "amount": number }, "split": { "method": "EQUAL" | "EXACT" | "PERCENTAGE", "details": map }, "isRecurring": boolean, "recurrenceRule": string (optional) }
+ExpenseDto: Represents a full expense object.
+UpdateExpenseDto: Similar to CreateExpenseDto, with all fields optional.
+
+4.4 Testing Plan
+
+Unit Testing: Extensively test the expense splitting logic. Create unit tests for each splitting method (equal, exact, percentage, shares) to ensure calculations are correct. Mock the Firestore repository and Pub/Sub template to test the service layer's business logic in isolation.
+Integration Testing: Use a Firestore emulator to test the transactional integrity of creating and updating expenses. Verify that an error during the process correctly rolls back all database changes. Test the API layer with MockMvc, ensuring complex CreateExpenseDto objects are validated correctly.
+E2E Testing: Create E2E tests for the entire expense lifecycle: creating a group, adding an expense with a complex split, verifying balances, and deleting the expense.
+
+Section 5: The Financial Engine: Balance & Settlement Service
+
+This service acts as the central calculator for the application, responsible for all financial computations, including real-time balance lookups, complex debt simplification, and the facilitation of settlements between users.
+
+5.1 High-Level Responsibilities
+
+Balance Calculation: Computes the net financial position for a user, either within a specific group or across all of their groups, providing a clear summary of who owes whom.
+Debt Simplification: Implements the "Simplify Debts" algorithm, a core feature that reduces a complex web of IOUs into the minimum number of payments required to settle all balances within a group.1
+Settlement Facilitation: Generates pre-filled deep links for trusted, third-party payment applications (e.g., GPay, PayPal) to provide a seamless and secure settlement experience.1
+Payment Recording: Provides an endpoint to record payments made outside the app (e.g., in cash), ensuring that balances in FinShare remain accurate and up-to-date.
+
+5.2 Low-Level Design
+
+The service will be implemented using Spring Boot. It primarily functions as a computational service, reading data from the transactions collection (owned by the Group & Expense Service) to perform its calculations. It may use Redis to cache frequently requested balance summaries for performance.
+The "Simplify Debts" feature provides significant user value by untangling what can be a confusing network of IOUs (e.g., A owes B, B owes C, and C owes A) into a simple, actionable payment plan.1 This is fundamentally a graph reduction problem, not a simple summation. The implementation will follow a well-established and optimal algorithm to solve this 25:
+Step 1: Calculate Net Balances. For a given group, the service first queries all unsettled transaction documents. It then iterates through this list to compute a single net balance for every member of the group. The formula for each user is:balanceuser​=∑(amount_owed_to_user)−∑(amount_owed_by_user)
+Step 2: Partition Users. Once all balances are calculated, the service partitions the users into two distinct sets: creditors (users with a positive balance, who are owed money) and debtors (users with a negative balance, who owe money).
+Step 3: Generate Minimum Transactions. The service then employs a greedy algorithm to systematically match debtors with creditors. It generates a list of simplified payment instructions (e.g., {from: debtor_A, to: creditor_X, amount: 10.00}) and adjusts their balances accordingly. This process continues iteratively until all balances in both sets are reduced to zero. This algorithm is guaranteed to produce the minimum possible number of transactions (at most n−1 transactions, where n is the number of people with non-zero balances), directly fulfilling the user requirement.25
+For settlements, when a user taps "Settle Up," this service will generate a platform-specific deep link (e.g., gpay://pay?pa={upi_id}&pn={name}&am={amount}). This strategy deliberately avoids the immense trust, security, and regulatory burdens of building a proprietary payment system, a key lesson learned from the PRD's analysis of Splitwise's dysfunctional "Splitwise Pay" feature.1
+
+5.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/balances/me
+GET
+(none)
+OverallBalanceDto
+Fetches all unsettled transaction documents from Firestore where the authenticated user is either the fromUser or toUser. Calculates their total net balance across all groups.
+/api/groups/{groupId}/balances
+GET
+(none)
+GroupBalanceDto
+Fetches all unsettled transaction documents for the specified groupId. Calculates the net balance for every member within that group.
+/api/groups/{groupId}/simplified-debts
+GET
+(none)
+SimplifiedDebtsDto
+Executes the debt simplification algorithm described in the low-level design for the specified group.
+/api/settlements/record
+POST
+RecordPaymentDto
+204 No Content
+Records a manual payment. Within a Firestore transaction, creates a new transaction of type settlement and updates the isSettled flag on the corresponding expense transaction documents. Publishes a payment_recorded event.
+
+Data Transfer Objects (DTOs):
+OverallBalanceDto: { "netBalance": number, "totalOwedToYou": number, "totalYouOwe": number }
+GroupBalanceDto: { "userBalances": { "userId": string, "balance": number }, "netBalanceForUser": number }
+SimplifiedDebtsDto: { "payments": { "fromUserId": string, "toUserId": string, "amount": number } }
+RecordPaymentDto: { "groupId": string, "toUserId": string, "amount": number }
+
+5.4 Testing Plan
+
+Unit Testing: Create extensive unit tests for the "Simplify Debts" algorithm. Test with various scenarios: simple debts, circular debts (A->B, B->C, C->A), and cases with multiple debtors and creditors to ensure the output is always the minimal number of transactions.
+Integration Testing: Use a Firestore emulator to test the balance calculation logic against a pre-populated set of transaction documents. Verify that recording a payment correctly updates the isSettled flags on the right documents.
+E2E Testing: Test the full settlement flow: create debts, simplify them, record a manual payment, and verify that the group balances are correctly updated to zero.
+
+Section 6: The Intelligence Layer: AI Service
+
+This is a specialized, polyglot service that houses all of FinShare's machine learning and generative AI capabilities. It is the engine behind the application's "intelligent" features.
+
+6.1 High-Level Responsibilities
+
+SMS Parsing & Categorization: Process structured transactional data extracted from SMS messages, and assign a relevant spending category using a machine learning model.1
+Autotraining: Implement the crucial feedback loop where user corrections to miscategorized expenses are used to continuously retrain and personalize the classification model for that user.1
+FinShare Co-Pilot: Serve as a secure gateway to the Google Gemini API, powering the Intelligent Trip Budgeter and the Personalized Budgeting Assistant features.1
+
+6.2 Low-Level Design
+
+This service will be implemented using Python and the FastAPI framework for high-performance model serving 8, and will leverage
+Google Cloud Pub/Sub to enable the asynchronous autotraining feedback loop.
+Expense Categorization and Autotraining Flow:
+The requirement to "learn from user corrections" necessitates a system that can process feedback asynchronously without impacting the performance of the core application.1 A synchronous API call for retraining would be inefficient and would tightly couple the transactional
+Group & Expense Service with the computational AI Service. A more resilient, event-driven architecture will be used:
+The Android client performs initial, on-device SMS parsing using regular expressions to extract structured data (merchant, amount, date), a design choice that enhances user privacy by processing raw message content locally.1
+This structured data is sent to the AI Service's /api/ai/categorize endpoint. The FastAPI application loads a pre-trained text classification model (e.g., a fine-tuned financial BERT variant from the Hugging Face Hub) and predicts a category based on the merchant name. This prediction is returned to the client for review.27
+When a user corrects a category, the client sends this update to the Group & Expense Service, which updates the category field in the corresponding expense document in Firestore.
+Upon a successful database write, the Group & Expense Service then publishes a categorization_corrected event to a Google Cloud Pub/Sub topic.15 The message payload is a simple JSON object containing the
+merchant_text and the user_corrected_category.
+The AI Service runs a background worker that subscribes to this topic. When it receives a message, it adds this new, high-quality labeled data point to a training dataset specific to that user.
+Periodically (e.g., on a nightly schedule or after a certain number of new examples are collected), a training job is triggered to fine-tune the user's personalized classification model with this new data. This MLOps pipeline can be managed and automated using platforms like Google's Vertex AI or Hugging Face AutoTrain.1 This architecture perfectly decouples the real-time transactional system from the computationally intensive ML training process, improving both resilience and scalability.
+Gemini Co-Pilot Gateway:
+Sending a user's raw, personally identifiable transaction history to a third-party LLM would be a significant privacy violation and would directly contradict the "Trust" pillar of the product. The AI Service must therefore act as a smart, privacy-preserving intermediary.
+When a user asks the Co-Pilot, "How can I reduce my spending on food?", the request is sent to the AI Service.
+The AI Service does not simply forward this query. Instead, its first step is to call the Analytics & Insights Service to retrieve anonymized, aggregated data for that user (e.g., a JSON object like { "category": "Food & Drink", "total_spend_30d": 450, "percent_of_total": "22%" }).
+The service then performs "prompt engineering." It constructs a new, context-rich, but privacy-preserving prompt to send to the Gemini API. For example: Context: A user is analyzing their spending habits. Their spending summary for the 'Food & Drink' category over the last 30 days is: {summary_data}. User's Question: "How can I reduce my spending on food?". Provide three actionable, personalized tips based on this summary.
+1
+This approach provides the LLM with sufficient context to generate a helpful and relevant response while ensuring that no personally identifiable financial data ever leaves the FinShare backend ecosystem. This strikes the perfect balance between delivering intelligent features and upholding the highest standards of user privacy.1
+
+6.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/ai/categorize
+POST
+CategorizeRequestDto
+CategoryResponseDto
+Takes structured transaction text (e.g., merchant name). Feeds the text into a pre-trained text classification model. Returns the predicted category and a confidence score.
+/api/ai/co-pilot/trip-budgeter
+POST
+TripBudgetRequestDto
+TripBudgetResponseDto
+Constructs a detailed prompt from the user's natural language request. Sends the prompt to the Gemini API. Parses the structured JSON/text response from Gemini into an itemized budget.
+/api/ai/co-pilot/assistant
+POST
+ChatRequestDto
+ChatResponseDto
+Forwards the user's query to the Gemini API for a conversational response. For queries about personal spending, it first fetches anonymized, aggregated data from the Analytics Service to enrich the prompt while preserving privacy.
+
+Data Transfer Objects (DTOs):
+CategorizeRequestDto: { "merchantText": string, "transactionType": "DEBIT" | "CREDIT" }
+CategoryResponseDto: { "predictedCategory": string, "confidenceScore": float }
+TripBudgetRequestDto: { "promptText": string }
+TripBudgetResponseDto: { "budgetItems": { "category": string, "estimatedCost": number, "description": string } }
+ChatRequestDto: { "message": string, "conversationHistory": { "role": "user" | "model", "text": string } (optional) }
+ChatResponseDto: { "reply": string }
+
+6.4 Testing Plan
+
+Unit Testing: Test the categorization model's prediction logic with a variety of merchant strings. Test the prompt engineering logic for the Gemini Co-Pilot to ensure it correctly anonymizes data and constructs context-rich prompts.
+Integration Testing: Use FastAPI's TestClient to test the API endpoints. Mock the Gemini API and other external services to test the service's behavior in isolation. Test the Pub/Sub consumer logic for the autotraining feedback loop.
+E2E Testing: Perform E2E tests on the Co-Pilot features, sending real requests to the Gemini API in a sandboxed environment to validate the quality and structure of the responses.
+
+Section 7: The Insight Engine: Analytics & Insights Service
+
+This service is responsible for processing raw financial data and transforming it into the visually engaging and actionable insights presented on the user's dashboard.
+
+7.1 High-Level Responsibilities
+
+Dashboard Data Aggregation: Provides the pre-aggregated data required to render the visual spending summaries (e.g., pie charts, bar charts) on the main dashboard, enabling at-a-glance financial awareness.1
+Budget Management: Manages the lifecycle of user-defined, category-based budgets, including their creation, modification, and tracking of spending against them.1
+Alert Generation: Monitors user spending against their set budgets and triggers alerts when predefined thresholds (e.g., 75%, 90%) are crossed.
+
+7.2 Low-Level Design
+
+The service will be implemented using Spring Boot and will rely heavily on Redis for high-performance caching and real-time aggregation.10
+The main dashboard must load almost instantaneously to provide a good user experience, a key non-functional requirement.1 Querying and aggregating all of a user's transactions for the month from Firestore every time they open the app would be far too slow and cost-prohibitive in terms of database reads. While a simple caching strategy could store the result of the first slow query, a more sophisticated, event-driven pattern will be employed to use Redis as a pre-computation engine rather than a simple cache.28
+The Analytics & Insights Service will subscribe to the expense_created, expense_updated, and expense_deleted event topics on Google Cloud Pub/Sub.
+When an event is received, instead of merely invalidating a cache key, the service will perform a direct, atomic, and incremental update on a pre-aggregated data structure stored in a Redis Hash.
+For example, upon receiving an event for a new $50 expense in the "Food" category for user user123 in June 2025, the service will execute the Redis command: HINCRBYFLOAT user123:dashboard:2025-06 Food 50.00. If an expense is deleted, it will use a negative value to decrement the total.
+When the client application requests the dashboard data, the Analytics Service's API endpoint simply needs to execute a single HGETALL user123:dashboard:2025-06 command against Redis. This is an extremely fast O(N) operation where N is the number of spending categories (a small number), not the total number of transactions for the month. This design ensures that the dashboard data is always up-to-date and can be served with minimal latency, effectively using Redis as a real-time materialized view of the user's spending.
+For budget alerts, a scheduled job will periodically compare the spending totals stored in the Redis hashes against the user-defined budgets stored in Firestore. If a spending threshold is crossed, the job will publish a budget_alert event to a Pub/Sub topic, which will be consumed by the Notification Service.
+
+7.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/analytics/dashboard
+GET
+Query Params: month, year
+DashboardDto
+Fetches pre-aggregated spending data for the specified month from the Redis Hash (e.g., HGETALL userId:dashboard:YYYY-MM). Returns the data formatted for chart display.
+/api/budgets
+POST
+CreateBudgetDto
+201 Created, BudgetDto
+Creates a new budget document in Firestore for the authenticated user.
+/api/budgets
+GET
+(none)
+List<BudgetDto>
+Retrieves all budget documents associated with the authenticated user from Firestore.
+/api/budgets/{budgetId}
+PUT
+UpdateBudgetDto
+200 OK, BudgetDto
+Updates the specified budget document in Firestore.
+/api/budgets/{budgetId}
+DELETE
+(none)
+204 No Content
+Deletes the specified budget document from Firestore.
+
+Data Transfer Objects (DTOs):
+DashboardDto: { "spendingByCategory": { "category": string, "amount": number }, "totalSpend": number }
+CreateBudgetDto: { "category": string, "amount": number, "period": "MONTHLY" | "WEEKLY" }
+UpdateBudgetDto: { "amount": number }
+BudgetDto: { "budgetId": string, "category": string, "amount": number, "period": string, "currentSpending": number }
+
+7.4 Testing Plan
+
+Unit Testing: Test the logic of the Pub/Sub event consumer that updates Redis. Simulate different event types (expense_created, expense_deleted) and verify that the correct Redis commands (HINCRBYFLOAT) are generated. Test the budget alert scheduler logic.
+Integration Testing: Use an embedded Redis server (e.g., from the it.ozimov:embedded-redis library) and a Firestore emulator. Publish mock events to a test Pub/Sub topic and verify that the data in the embedded Redis instance is updated correctly. Test the /api/analytics/dashboard endpoint to ensure it reads correctly from Redis.
+E2E Testing: Create an expense, then immediately hit the dashboard endpoint to verify that the real-time aggregation pipeline is working correctly and the dashboard reflects the new expense.
+
+Section 8: The Messenger: Notification Service
+
+This is a lightweight, asynchronous service whose sole purpose is to handle all user-facing push notifications in a decoupled and scalable manner.
+
+8.1 High-Level Responsibilities
+
+Event Consumption: Subscribes to various event topics on Google Cloud Pub/Sub, such as new_expense_notification, settlement_notification, and budget_alert.
+Message Formatting: Constructs clear, user-friendly notification payloads based on the type of event and its associated data.
+Push Notification Delivery: Integrates with Firebase Cloud Messaging (FCM) to reliably deliver push notifications to the correct user devices.
+
+8.2 Low-Level Design
+
+The service will be implemented using Spring Boot and the Spring Cloud GCP Pub/Sub Starter, which provides robust abstractions for consuming messages from Pub/Sub.5
+Multiple services within the FinShare ecosystem will need to trigger notifications. Embedding FCM integration logic into each of those services would create tight coupling, code duplication, and maintenance overhead. This would violate the Single Responsibility Principle, as the Group & Expense Service, for example, should not be concerned with the formatting of a push notification.3
+A superior architectural pattern is to create a centralized, generic Notification Service. All other services in the system become "event producers." For instance, when a new expense is added, the Group & Expense Service simply publishes a structured event to a notifications.push topic on Pub/Sub. The Notification Service is the sole "event consumer" for this topic. It is designed as a simple, stateless worker whose only job is to:
+Receive a structured event from the Pub/Sub subscription.
+Parse the event payload (e.g., { eventType: 'NEW_EXPENSE', fromUserId: 'uid-john', toUserId: 'uid-jane', groupName: 'Europe Trip', amount: 50.00 }).
+If necessary, call the User Service to resolve user IDs to display names or to fetch the recipient's FCM device token.
+Construct the final, human-readable notification message (e.g., "John Smith added a $50.00 expense to 'Europe Trip'").
+Send the formatted message to the recipient via the Firebase Cloud Messaging API.
+This design completely decouples the business logic services from the implementation details of sending notifications. If the product later requires adding email or in-app notifications, only the Notification Service needs to be modified. This pattern is highly scalable, maintainable, and resilient.
+
+8.3 Consumed Events Contract
+
+This service does not expose a public REST API. Instead, it subscribes to topics in Google Cloud Pub/Sub. Its "API" is the contract of the event payloads it consumes.
+
+Event Type
+Pub/Sub Topic Name
+Event Payload Schema (JSON)
+Description
+New Expense Added
+finshare.events.expenses
+{ "eventType": "NEW_EXPENSE", "expenseId": string, "groupId": string, "groupName": string, "addedByUserId": string, "amount": number, "description": string, "involvedUserIds": string }
+Published by the Group & Expense Service. Triggers a notification to all involvedUserIds (except the user who added it) about the new expense.
+Payment Recorded
+finshare.events.settlements
+{ "eventType": "PAYMENT_RECORDED", "groupId": string, "fromUserId": string, "toUserId": string, "amount": number }
+Published by the Balance & Settlement Service. Triggers a notification to the toUserId informing them that the fromUserId has recorded a payment.
+Budget Alert
+finshare.events.analytics
+{ "eventType": "BUDGET_ALERT", "userId": string, "category": string, "percentage": number, "budgetId": string }
+Published by the Analytics & Insights Service. Triggers a notification to the userId warning them that they have reached a certain percentage of their budget for a category.
+
+
+8.4 Testing Plan
+
+Unit Testing: Test the message formatting logic for each event type. Given a sample event payload, verify that the correct human-readable notification string is generated. Mock the FCM client and User Service client.
+Integration Testing: Use a test implementation of the Pub/Sub binder (e.g., spring-cloud-stream-test-binder) to send mock events to the service's consumer function. Verify that the service attempts to call the mocked FCM client with the correctly formatted payload.
+E2E Testing: In a staging environment, perform an action that triggers a notification (e.g., add an expense). Verify that a real push notification is received on a test device.
+
+Section 9: The Blueprint for Production: Deployment & Operations
+
+This section provides the standardized operational templates and procedures for packaging, deploying, and managing the FinShare microservices in a production environment.
+
+9.1 Containerization Strategy
+
+All microservices, regardless of their implementation language (Java or Python), will be packaged as Docker containers to ensure consistency and portability across all environments.6
+A standardized and optimized build process is key to an efficient and secure CI/CD pipeline. To achieve this, a dual strategy will be employed, applying the best-practice containerization method for each technology stack:
+For the Spring Boot services, the spring-boot-maven-plugin's build-image goal will be used.30 This leverages Cloud Native Buildpacks to create highly optimized, layered Docker images. Buildpacks automatically analyze the application and separate it into logical layers (e.g., dependencies, Spring Boot loader, application code). This results in faster rebuilds during development (as only changed layers are rebuilt) and smaller image deltas pushed to the container registry, saving time and storage. This powerful approach requires no
+Dockerfile, simplifying the build configuration for the majority of the system's services.
+For the Python/FastAPI AI Service, a manually crafted Dockerfile is necessary. This file will implement a multi-stage build, a critical optimization technique.18 The first stage, the
+build stage, will use a full Python base image to compile and install all dependencies from the requirements.txt file. The final, lean production stage will use a minimal base image (e.g., python:3.9-slim) and will copy only the pre-installed dependencies and the application code from the build stage. This process dramatically reduces the final image's size and, more importantly, its security attack surface by excluding build tools and other unnecessary components.33
+This dual strategy ensures that every service is packaged using the most efficient, secure, and idiomatic method for its respective technology stack.
+
+9.2 Orchestration and Deployment
+
+Kubernetes will be the container orchestration platform for all environments, from staging to production. It will manage the deployment, scaling, and health of all containerized services.17
+Standardized Kubernetes manifest templates will be created for each service to ensure consistency.
+deployment.yaml: This manifest will define the desired state of the application deployment. It will specify the number of replicas (for high availability), the container image and tag to be used, liveness and readiness probes (for health checking), and, critically, resource requests and limits for CPU and memory. Setting these limits is a crucial practice to ensure predictable performance and prevent a single faulty service from consuming all cluster resources and causing a cascading failure.18
+service.yaml: This manifest will define how each service is exposed within the cluster's internal network. Most services will be exposed via a ClusterIP service type, making them accessible to other services within the cluster but not from the outside. The API Gateway will be the only service exposed to public internet traffic, likely through a LoadBalancer service type or a more advanced Kubernetes Ingress controller.
+Application configuration—such as database connection strings, API keys for third-party services, and other environment-specific settings—will be externalized from the Docker images. This will be managed using Kubernetes ConfigMaps for non-sensitive data and Secrets for sensitive credentials, a core best practice.32 This allows the exact same container image to be deployed across different environments (development, staging, production) simply by applying the appropriate configuration for that environment.
+
+9.3 Testing Plan
+
+CI/CD Pipeline Testing: The CI/CD pipeline itself must be tested. This includes testing the build scripts, the Docker image creation process (verifying image layers and size), and the deployment scripts that apply Kubernetes manifests.
+Smoke Testing: After every deployment to a new environment (staging, production), automated smoke tests should run. These are a small subset of critical E2E tests (e.g., can a user log in? can an expense be created?) that quickly verify the deployment was successful and the application is in a healthy state.
+Canary/Blue-Green Deployment Testing: When using advanced deployment strategies, the process must be tested. Verify that traffic is correctly shifted, that monitoring correctly tracks the health of the new version, and that automated rollback procedures are triggered upon failure.
+
+Section 10: API Summary Table
+
+This table provides a consolidated view of all the public-facing API endpoints exposed by the FinShare backend microservices. For detailed request/response models and logic, refer to the API Contract tables within each service's dedicated section.
+
+Service
+Endpoint
+HTTP Method
+Description
+API Gateway
+/api/**
+ALL
+Acts as a single entry point. Routes all requests to the appropriate downstream service based on the path. Enforces authentication and rate limiting.
+User Service
+/api/users/me
+GET
+Fetches the profile of the currently authenticated user.
+
+
+/api/users/me
+PUT
+Updates the profile (e.g., display name, profile image) of the authenticated user.
+
+
+/api/users/search
+GET
+Searches for another user by their phone number to facilitate adding friends to groups.
+Group & Expense Service
+/api/groups
+POST
+Creates a new group.
+
+
+/api/groups/{groupId}
+GET
+Retrieves the details of a specific group.
+
+
+/api/groups/{groupId}/members
+POST
+Adds a new member to a group.
+
+
+/api/groups/{groupId}/expenses
+POST
+Adds a new expense to a group, handling various split types.
+
+
+/api/expenses/{expenseId}
+PUT
+Updates an existing expense.
+
+
+/api/expenses/{expenseId}
+DELETE
+Deletes an expense.
+Balance & Settlement Service
+/api/balances/me
+GET
+Calculates and retrieves the user's overall net balance across all groups.
+
+
+/api/groups/{groupId}/balances
+GET
+Calculates and retrieves the user's balance within a specific group.
+
+
+/api/groups/{groupId}/simplified-debts
+GET
+Applies the debt simplification algorithm and returns the minimal set of transactions to settle debts in a group.
+
+
+/api/settlements/record
+POST
+Records a manual payment (e.g., cash) to settle a debt.
+AI Service
+/api/ai/categorize
+POST
+Receives structured transaction data (e.g., from SMS) and returns an AI-predicted category.
+
+
+/api/ai/co-pilot/trip-budgeter
+POST
+Takes a natural language trip description and returns a generated, itemized budget using the Gemini API.
+
+
+/api/ai/co-pilot/assistant
+POST
+Handles conversational queries for the Personalized Budgeting Assistant, powered by the Gemini API.
+Analytics & Insights Service
+/api/analytics/dashboard
+GET
+Retrieves pre-aggregated data for the user's main spending dashboard.
+
+
+/api/budgets
+POST
+Creates a new category-based budget for the user.
+
+
+/api/budgets
+GET
+Retrieves all budgets set by the user.
+
+
+/api/budgets/{budgetId}
+PUT
+Updates an existing budget.
+Notification Service
+(Internal)
+N/A
+This is an internal, event-driven service. It does not expose a public REST API. It consumes events from other services via Pub/Sub to send push notifications.
+
+Works cited
+accessed on January 1, 1970,
+10 Best Practices for Microservices Architecture in 2025 - GeeksforGeeks, accessed on June 22, 2025, https://www.geeksforgeeks.org/blogs/best-practices-for-microservices-architecture/
+Microservice architecture style - Azure Architecture Center | Microsoft Learn, accessed on June 22, 2025, https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/microservices
+13 Microservices Best Practices - Oso, accessed on June 22, 2025, https://www.osohq.com/learn/microservices-best-practices
+Using Pub/Sub in Spring applications - Google Cloud, accessed on June 22, 2025, https://cloud.google.com/pubsub/docs/spring
+Getting Started with Spring Boot and Docker - Diffblue, accessed on June 22, 2025, https://www.diffblue.com/resources/getting-started-with-spring-boot-and-docker/
+Building Microservices Using Spring Boot and Docker - DZone, accessed on June 22, 2025, https://dzone.com/articles/buiding-microservice-using-springboot-and-docker
+How to Use FastAPI for Machine Learning | The PyCharm Blog, accessed on June 22, 2025, https://blog.jetbrains.com/pycharm/2024/09/how-to-use-fastapi-for-machine-learning/
+Deploy Machine Learning API with FastAPI for free - Lightning AI, accessed on June 22, 2025, https://lightning.ai/lightning-ai/studios/deploy-machine-learning-api-with-fastapi-for-free
+Spring Boot - Caching with Redis - GeeksforGeeks, accessed on June 22, 2025, https://www.geeksforgeeks.org/spring-boot-caching-with-redis/
+Quickstart: Create a Firestore database by using a server client library - Google Cloud, accessed on June 22, 2025, https://cloud.google.com/firestore/native/docs/create-database-server-client-library
+JWT Authentication with Firebase for your API - YouTube, accessed on June 22, 2025, https://www.youtube.com/watch?v=PTUrxDPM4UQ
+Spring Boot JWT Example with Firebase Authentication - GitHub, accessed on June 22, 2025, https://github.com/iethem/spring-jwt-firebase
+Spring Boot + Redis + Docker: Ultimate Guide to Caching in Java - Mastering Backend, accessed on June 22, 2025, https://masteringbackend.com/posts/spring-boot-redis-docker-ultimate-guide-to-caching-in-java
+Messaging with Spring Integration and Google Cloud Pub/Sub, accessed on June 22, 2025, https://codelabs.developers.google.com/codelabs/cloud-spring-cloud-gcp-pubsub-integration
+How to dockerize Spring Boot apps | TheServerSide, accessed on June 22, 2025, https://www.theserverside.com/video/Simplify-a-cloud-native-Spring-Boot-Docker-deployment
+Kubernetes for Beginners: Spring Boot Microservice Deployment - Mobisoft Infotech, accessed on June 22, 2025, https://mobisoftinfotech.com/resources/blog/kubernetes-for-beginners-spring-boot-deployment
+How to Deploy Spring Boot Applications on Kubernetes Effectively - Devtron, accessed on June 22, 2025, https://devtron.ai/blog/how-to-deploy-spring-boot-application-on-kubernetes/
+Developing and deploying Spring Boot microservices on Kubernetes - Learnk8s, accessed on June 22, 2025, https://learnk8s.io/spring-boot-kubernetes-guide
+Using Firebase to authenticate users | API Gateway Documentation - Google Cloud, accessed on June 22, 2025, https://cloud.google.com/api-gateway/docs/authenticating-users-firebase
+Using JWT to authenticate users | API Gateway Documentation - Google Cloud, accessed on June 22, 2025, https://cloud.google.com/api-gateway/docs/authenticating-users-jwt
+Spring GCP Data Firestore - NashTech Blog, accessed on June 22, 2025, https://blog.nashtechglobal.com/spring-gcp-data-firestore/
+Best practices for Cloud Firestore - Firebase, accessed on June 22, 2025, https://firebase.google.com/docs/firestore/best-practices
+Spring Boot | CRUD Operations with Firebase Firestore | NoSQL Database | 2024, accessed on June 22, 2025, https://www.youtube.com/watch?v=_qeF0P4Mhc4
+Debt simplification - Terbium, accessed on June 22, 2025, https://terbium.io/2020/09/debt-simplification/
+Simplify Splitwise Debts Fast: The Algorithmic Approach | Splitwise Simplify Debts, accessed on June 22, 2025, https://splitwise-simplify-debts.pages.dev/
+Step-by-Step Guide to Deploying Machine Learning Models with FastAPI and Docker, accessed on June 22, 2025, https://machinelearningmastery.com/step-by-step-guide-to-deploying-machine-learning-models-with-fastapi-and-docker/
+How to implement Redis Cache in Spring Boot? - JavaTechOnline, accessed on June 22, 2025, https://javatechonline.com/how-to-implement-redis-cache-in-spring-boot/
+Cloud Pub/Sub, accessed on June 22, 2025, https://googlecloudplatform.github.io/spring-cloud-gcp/reference/html/pubsub.html
+Getting Started | Spring Boot with Docker, accessed on June 22, 2025, https://spring.io/guides/gs/spring-boot-docker/
+Getting Started | Spring Boot Kubernetes, accessed on June 22, 2025, https://spring.io/guides/gs/spring-boot-kubernetes
+Getting Started | Spring on Kubernetes, accessed on June 22, 2025, https://spring.io/guides/topicals/spring-on-kubernetes/
+Machine Learning Model Deployment with FastAPI and Docker - DEV Community, accessed on June 22, 2025, https://dev.to/code_jedi/machine-learning-model-deployment-with-fastapi-and-docker-llo

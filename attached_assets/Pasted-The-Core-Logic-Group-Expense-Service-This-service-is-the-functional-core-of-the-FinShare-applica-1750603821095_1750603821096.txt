@@ -1,0 +1,94 @@
+The Core Logic: Group & Expense Service
+
+This service is the functional core of the FinShare application. It encapsulates all the complex business logic related to creating and managing groups, logging expenses, and calculating splits.
+
+4.1 High-Level Responsibilities
+
+Group Management: Provides full CRUD functionality for groups, including creating new groups, inviting and removing members, and updating group metadata like its name or image.
+Expense Management: Implements the complete suite of expense management features detailed in the PRD.1 This includes quick expense addition, a variety of flexible splitting methods (equally, by exact amounts, by percentage, by shares), advanced receipt itemization using OCR, support for expenses paid by multiple people, and the automated creation of recurring expenses.
+Transactional Integrity: Guarantees that all financial operations are atomic. This is non-negotiable for a financial application, as it prevents data corruption and ensures that user balances are always accurate and consistent.
+
+4.2 Low-Level Design
+
+This service will be implemented using Spring Boot and Spring Data Firestore.
+A single financial action, such as adding a complex, multi-payer expense, can result in numerous database writes: one for the primary expense document and potentially dozens of individual transaction documents representing the resulting IOUs for each group member. The PRD outlines these complex scenarios, and an error during this multi-write process could leave the group's financial state corrupt and inconsistent, fundamentally violating the product's "Trust" pillar.1 The non-functional requirements explicitly mandate data integrity and atomic operations to prevent this.1
+Firestore's support for atomic batch writes and transactions provides the direct technical solution to this critical requirement.1 The logic for creating or updating an expense will be wrapped in a single Firestore
+runTransaction block. Within this atomic operation, the service will perform all necessary database modifications:
+Create or update the main expense document.
+Calculate the financial obligations for each member based on the specified splitting method.
+Create or update all the corresponding transaction documents that represent the individual debts between users.
+If any of these writes fail for any reason, Firestore's transaction mechanism ensures that the entire operation is automatically rolled back. This guarantees that the database is never left in a partial or inconsistent state, thereby upholding the integrity of the financial records.24
+Recurring Expenses Logic:
+To handle recurring expenses like monthly rent, a scheduled job (implemented with Spring's @Scheduled annotation or a cloud-native scheduler like Google Cloud Scheduler) will execute periodically (e.g., daily). This job will query the expenses collection for all documents marked as recurring (isRecurring: true) and where the nextDueDate matches the current date. For each matching template, it will generate a new concrete expense instance in the group and then update the template's nextDueDate to the next recurrence date.
+
+4.3 API Contracts
+
+
+Group Management APIs
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/groups
+POST
+CreateGroupDto
+201 Created, GroupDto
+Creates a new document in the groups collection. The authenticated user is automatically added as the first member. Calls the User Service to resolve any additional memberPhoneNumbers to userIds and adds them to the members array.
+/api/groups/{groupId}
+GET
+(none)
+GroupDetailDto
+Fetches the group document by its ID. Verifies that the authenticated user is a member of the group. Populates member details by calling the User Service.
+/api/groups/{groupId}/members
+POST
+AddMemberDto
+200 OK, GroupDto
+Adds a new member to an existing group. Calls the User Service to resolve the userPhoneNumber to a userId. Atomically adds the userId to the members array in the group document.
+
+
+Expense Management APIs
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/groups/{groupId}/expenses
+POST
+CreateExpenseDto
+201 Created, ExpenseDto
+Core Transactional Logic. Within a Firestore transaction: 1. Creates the expense document. 2. Calculates debts based on splitMethod. 3. Creates corresponding transaction documents for each IOU. 4. Publishes a new_expense_added event to Pub/Sub.
+/api/expenses/{expenseId}
+PUT
+UpdateExpenseDto
+200 OK, ExpenseDto
+Updates an existing expense. Uses a Firestore transaction to update the expense document and recalculate/update all associated transaction documents to ensure consistency.
+/api/expenses/{expenseId}
+DELETE
+(none)
+204 No Content
+Deletes an expense and all of its associated transaction documents within a single atomic Firestore transaction.
+/api/groups/{groupId}/expenses
+GET
+(none)
+List<ExpenseDto>
+Fetches a list of all expenses associated with the given groupId.
+
+Data Transfer Objects (DTOs):
+CreateGroupDto: { "groupName": string, "groupImageUrl": string (optional), "memberPhoneNumbers": string (optional) }
+GroupDto: { "groupId": string, "groupName": string, "groupImageUrl": string, "memberIds": string }
+GroupDetailDto: Extends GroupDto with { "members": SearchedUserDto }
+AddMemberDto: { "userPhoneNumber": string }
+CreateExpenseDto: { "description": string, "amount": number, "category": string, "paidBy": { "userId": string, "amount": number }, "split": { "method": "EQUAL" | "EXACT" | "PERCENTAGE", "details": map }, "isRecurring": boolean, "recurrenceRule": string (optional) }
+ExpenseDto: Represents a full expense object.
+UpdateExpenseDto: Similar to CreateExpenseDto, with all fields optional.
+
+4.4 Testing Plan
+
+Unit Testing: Extensively test the expense splitting logic. Create unit tests for each splitting method (equal, exact, percentage, shares) to ensure calculations are correct. Mock the Firestore repository and Pub/Sub template to test the service layer's business logic in isolation.
+Integration Testing: Use a Firestore emulator to test the transactional integrity of creating and updating expenses. Verify that an error during the process correctly rolls back all database changes. Test the API layer with MockMvc, ensuring complex CreateExpenseDto objects are validated correctly.
+E2E Testing: Create E2E tests for the entire expense lifecycle: creating a group, adding an expense with a complex split, verifying balances, and deleting the expense.
