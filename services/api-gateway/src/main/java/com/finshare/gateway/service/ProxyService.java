@@ -57,8 +57,13 @@ public class ProxyService {
                 return ResponseEntity.notFound().build();
             }
 
-            // Remove /api prefix and construct final URL
-            String servicePath = path.substring(4); // Remove "/api"
+            // For AI service, keep the full path; for others, remove /api prefix
+            String servicePath;
+            if (path.startsWith("/api/ai")) {
+                servicePath = path; // Keep full path for AI service
+            } else {
+                servicePath = path.substring(4); // Remove "/api" for other services
+            }
             String fullUrl = targetUrl + servicePath;
             
             // Add query parameters if present
