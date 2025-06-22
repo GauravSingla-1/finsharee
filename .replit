@@ -2,7 +2,7 @@ modules = ["java-graalvm22.3", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["libxcrypt", "maven", "redis"]
+packages = ["libxcrypt", "maven", "redis", "jq"]
 
 [workflows]
 runButton = "Project"
