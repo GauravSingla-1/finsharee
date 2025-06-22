@@ -1,4 +1,4 @@
-modules = ["java", "java-21"]
+modules = ["java", "java-21", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
@@ -31,3 +31,15 @@ run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArgum
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8001
+externalPort = 3000
+
+[[ports]]
+localPort = 8002
+externalPort = 3001
+
+[[ports]]
+localPort = 8003
+externalPort = 3002
