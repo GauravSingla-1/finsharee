@@ -1,0 +1,69 @@
+The Intelligence Layer: AI Service
+
+This is a specialized, polyglot service that houses all of FinShare's machine learning and generative AI capabilities. It is the engine behind the application's "intelligent" features.
+
+6.1 High-Level Responsibilities
+
+SMS Parsing & Categorization: Process structured transactional data extracted from SMS messages, and assign a relevant spending category using a machine learning model.1
+Autotraining: Implement the crucial feedback loop where user corrections to miscategorized expenses are used to continuously retrain and personalize the classification model for that user.1
+FinShare Co-Pilot: Serve as a secure gateway to the Google Gemini API, powering the Intelligent Trip Budgeter and the Personalized Budgeting Assistant features.1
+
+6.2 Low-Level Design
+
+This service will be implemented using Python and the FastAPI framework for high-performance model serving 8, and will leverage
+Google Cloud Pub/Sub to enable the asynchronous autotraining feedback loop.
+Expense Categorization and Autotraining Flow:
+The requirement to "learn from user corrections" necessitates a system that can process feedback asynchronously without impacting the performance of the core application.1 A synchronous API call for retraining would be inefficient and would tightly couple the transactional
+Group & Expense Service with the computational AI Service. A more resilient, event-driven architecture will be used:
+The Android client performs initial, on-device SMS parsing using regular expressions to extract structured data (merchant, amount, date), a design choice that enhances user privacy by processing raw message content locally.1
+This structured data is sent to the AI Service's /api/ai/categorize endpoint. The FastAPI application loads a pre-trained text classification model (e.g., a fine-tuned financial BERT variant from the Hugging Face Hub) and predicts a category based on the merchant name. This prediction is returned to the client for review.27
+When a user corrects a category, the client sends this update to the Group & Expense Service, which updates the category field in the corresponding expense document in Firestore.
+Upon a successful database write, the Group & Expense Service then publishes a categorization_corrected event to a Google Cloud Pub/Sub topic.15 The message payload is a simple JSON object containing the
+merchant_text and the user_corrected_category.
+The AI Service runs a background worker that subscribes to this topic. When it receives a message, it adds this new, high-quality labeled data point to a training dataset specific to that user.
+Periodically (e.g., on a nightly schedule or after a certain number of new examples are collected), a training job is triggered to fine-tune the user's personalized classification model with this new data. This MLOps pipeline can be managed and automated using platforms like Google's Vertex AI or Hugging Face AutoTrain.1 This architecture perfectly decouples the real-time transactional system from the computationally intensive ML training process, improving both resilience and scalability.
+Gemini Co-Pilot Gateway:
+Sending a user's raw, personally identifiable transaction history to a third-party LLM would be a significant privacy violation and would directly contradict the "Trust" pillar of the product. The AI Service must therefore act as a smart, privacy-preserving intermediary.
+When a user asks the Co-Pilot, "How can I reduce my spending on food?", the request is sent to the AI Service.
+The AI Service does not simply forward this query. Instead, its first step is to call the Analytics & Insights Service to retrieve anonymized, aggregated data for that user (e.g., a JSON object like { "category": "Food & Drink", "total_spend_30d": 450, "percent_of_total": "22%" }).
+The service then performs "prompt engineering." It constructs a new, context-rich, but privacy-preserving prompt to send to the Gemini API. For example: Context: A user is analyzing their spending habits. Their spending summary for the 'Food & Drink' category over the last 30 days is: {summary_data}. User's Question: "How can I reduce my spending on food?". Provide three actionable, personalized tips based on this summary.
+1
+This approach provides the LLM with sufficient context to generate a helpful and relevant response while ensuring that no personally identifiable financial data ever leaves the FinShare backend ecosystem. This strikes the perfect balance between delivering intelligent features and upholding the highest standards of user privacy.1
+
+6.3 API Contracts
+
+
+Endpoint
+HTTP Method
+Request DTO
+Response DTO (Success)
+Detailed Logic
+/api/ai/categorize
+POST
+CategorizeRequestDto
+CategoryResponseDto
+Takes structured transaction text (e.g., merchant name). Feeds the text into a pre-trained text classification model. Returns the predicted category and a confidence score.
+/api/ai/co-pilot/trip-budgeter
+POST
+TripBudgetRequestDto
+TripBudgetResponseDto
+Constructs a detailed prompt from the user's natural language request. Sends the prompt to the Gemini API. Parses the structured JSON/text response from Gemini into an itemized budget.
+/api/ai/co-pilot/assistant
+POST
+ChatRequestDto
+ChatResponseDto
+Forwards the user's query to the Gemini API for a conversational response. For queries about personal spending, it first fetches anonymized, aggregated data from the Analytics Service to enrich the prompt while preserving privacy.
+
+Data Transfer Objects (DTOs):
+CategorizeRequestDto: { "merchantText": string, "transactionType": "DEBIT" | "CREDIT" }
+CategoryResponseDto: { "predictedCategory": string, "confidenceScore": float }
+TripBudgetRequestDto: { "promptText": string }
+TripBudgetResponseDto: { "budgetItems": { "category": string, "estimatedCost": number, "description": string } }
+ChatRequestDto: { "message": string, "conversationHistory": { "role": "user" | "model", "text": string } (optional) }
+ChatResponseDto: { "reply": string }
+
+6.4 Testing Plan
+
+Unit Testing: Test the categorization model's prediction logic with a variety of merchant strings. Test the prompt engineering logic for the Gemini Co-Pilot to ensure it correctly anonymizes data and constructs context-rich prompts.
+Integration Testing: Use FastAPI's TestClient to test the API endpoints. Mock the Gemini API and other external services to test the service's behavior in isolation. Test the Pub/Sub consumer logic for the autotraining feedback loop.
+E2E Testing: Perform E2E tests on the Co-Pilot features, sending real requests to the Gemini API in a sandboxed environment to validate the quality and structure of the responses.
