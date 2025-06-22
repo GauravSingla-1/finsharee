@@ -40,6 +40,10 @@ args = "Group Expense Service"
 task = "workflow.run"
 args = "Expo Mobile App"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Backend Server"
+
 [[workflows.workflow]]
 name = "Balance Settlement Service"
 author = "agent"
@@ -102,6 +106,15 @@ author = "agent"
 task = "shell.exec"
 args = "cd expo-app && npx expo start --tunnel"
 waitForPort = 8081
+
+[[workflows.workflow]]
+name = "Backend Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python simple-backend.py"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]

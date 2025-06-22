@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../config';
 
 export default function CreateExpenseScreen({ navigation, route }) {
   const [expenseData, setExpenseData] = useState({
@@ -144,7 +145,7 @@ export default function CreateExpenseScreen({ navigation, route }) {
         splitMethod: expenseData.splitMethod,
       };
 
-      const response = await fetch('http://YOUR_IP:5000/api/expenses', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.EXPENSES}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

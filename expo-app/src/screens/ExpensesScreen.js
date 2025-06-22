@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../config';
 
 export default function ExpensesScreen({ navigation }) {
   const [expenses, setExpenses] = useState([]);
@@ -24,7 +25,7 @@ export default function ExpensesScreen({ navigation }) {
     try {
       const userId = await AsyncStorage.getItem('userId');
       
-      const response = await fetch(`http://YOUR_IP:5000/api/expenses`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.EXPENSES}`, {
         headers: {
           'X-Authenticated-User-ID': userId,
         },

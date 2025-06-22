@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../config';
 
 export default function DashboardScreen({ navigation }) {
   const [dashboardData, setDashboardData] = useState({
@@ -39,7 +40,7 @@ export default function DashboardScreen({ navigation }) {
       const userId = await AsyncStorage.getItem('userId');
       
       // Try to fetch from backend
-      const response = await fetch(`http://YOUR_IP:5000/api/dashboard/${userId}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DASHBOARD}`, {
         headers: {
           'X-Authenticated-User-ID': userId,
         },

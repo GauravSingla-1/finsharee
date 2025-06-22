@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../config';
 
 export default function GroupsScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
@@ -23,7 +24,7 @@ export default function GroupsScreen({ navigation }) {
     try {
       const userId = await AsyncStorage.getItem('userId');
       
-      const response = await fetch(`http://YOUR_IP:5000/api/groups`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GROUPS}`, {
         headers: {
           'X-Authenticated-User-ID': userId,
         },
