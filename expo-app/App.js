@@ -58,7 +58,7 @@ function MainTabs() {
 }
 
 // Main App Component
-export default function App() {
+function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
