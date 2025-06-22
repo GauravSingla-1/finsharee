@@ -1,4 +1,4 @@
-modules = ["java-graalvm22.3", "python-3.11", "nodejs-20", "web"]
+modules = ["java-graalvm22.3", "nodejs-20", "python-3.11", "bash"]
 
 [nix]
 channel = "stable-24_05"
@@ -35,6 +35,10 @@ args = "API Gateway"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Group Expense Service"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Expo Mobile App"
 
 [[workflows.workflow]]
 name = "Balance Settlement Service"
@@ -90,6 +94,15 @@ task = "shell.exec"
 args = "cd services/group-expense-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8002\""
 waitForPort = 8002
 
+[[workflows.workflow]]
+name = "Expo Mobile App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd expo-app && npx expo start --tunnel"
+waitForPort = 8081
+
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
 
@@ -124,3 +137,7 @@ externalPort = 5000
 [[ports]]
 localPort = 8006
 externalPort = 5173
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
