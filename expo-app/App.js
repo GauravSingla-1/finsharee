@@ -37,7 +37,7 @@ function MainTabs() {
           } else if (route.name === 'Expenses') {
             iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'AI Co-Pilot') {
-            iconName = focused ? 'brain' : 'brain-outline';
+            iconName = focused ? 'bulb' : 'bulb-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }

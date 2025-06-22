@@ -169,7 +169,7 @@ export default function AICoPilotScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="brain" size={24} color="#007AFF" />
+        <Ionicons name="bulb" size={24} color="#007AFF" />
         <Text style={styles.headerTitle}>AI Co-Pilot</Text>
         <TouchableOpacity
           onPress={() => setMessages(messages.slice(0, 1))}
