@@ -40,8 +40,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         String path = request.getRequestURI();
         
-        // Skip authentication for health check endpoints
-        if (path.equals("/health") || path.startsWith("/actuator/health")) {
+        // Skip authentication for public endpoints as defined in SecurityConfig
+        if (path.equals("/health") || path.startsWith("/actuator/health") || 
+            path.equals("/") || path.equals("/app") || path.startsWith("/api/")) {
             filterChain.doFilter(request, response);
             return;
         }
