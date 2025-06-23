@@ -20,12 +20,12 @@ async function checkServiceStatus() {
     if (!statusContainer) return;
     
     const services = [
-        { name: 'Auth Backend', url: API_CONFIG.SERVICES.auth, port: '5000' },
-        { name: 'Group Expense', url: API_CONFIG.SERVICES.group, port: '8002' },
-        { name: 'Balance Settlement', url: API_CONFIG.SERVICES.balance, port: '8003' },
-        { name: 'AI Service', url: API_CONFIG.SERVICES.ai, port: '8004' },
-        { name: 'Analytics', url: API_CONFIG.SERVICES.analytics, port: '8005' },
-        { name: 'Notification', url: API_CONFIG.SERVICES.notification, port: '8006' }
+        { name: 'Auth Backend', url: 'http://127.0.0.1:5000', port: '5000' },
+        { name: 'Group Expense', url: 'http://127.0.0.1:8002', port: '8002' },
+        { name: 'Balance Settlement', url: 'http://127.0.0.1:8003', port: '8003' },
+        { name: 'AI Service', url: 'http://127.0.0.1:8004', port: '8004' },
+        { name: 'Analytics', url: 'http://127.0.0.1:8005', port: '8005' },
+        { name: 'Notification', url: 'http://127.0.0.1:8006', port: '8006' }
     ];
 
     statusContainer.innerHTML = '';
@@ -58,16 +58,16 @@ async function checkServiceStatus() {
             }
             
             if (response && response.ok) {
-                card.classList.add('online');
+                card.classList?.add('online');
                 const statusEl = document.getElementById(`status-${service.port}`);
                 if (statusEl) statusEl.textContent = '✅ Online';
             } else {
-                card.classList.add('offline');
+                card.classList?.add('offline');
                 const statusEl = document.getElementById(`status-${service.port}`);
                 if (statusEl) statusEl.textContent = '❌ Offline';
             }
         } catch (error) {
-            card.classList.add('offline');
+            card.classList?.add('offline');
             const statusEl = document.getElementById(`status-${service.port}`);
             if (statusEl) statusEl.textContent = `❌ Error: ${error.message}`;
         }
@@ -77,7 +77,7 @@ async function checkServiceStatus() {
 // Quick login function
 async function testLogin() {
     try {
-        const response = await fetch(`${API_CONFIG.SERVICES.auth}/api/auth/login`, {
+        const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
