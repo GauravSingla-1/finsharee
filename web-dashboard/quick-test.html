@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinShare Quick API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .service { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .online { background: #d4edda; border-color: #c3e6cb; }
+        .offline { background: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>FinShare Services Quick Test</h1>
+    
+    <div id="auth-service" class="service">
+        <h3>Authentication Service (Port 5000)</h3>
+        <button onclick="testAuth()">Test Login</button>
+        <button onclick="testConnection('http://127.0.0.1:5000/test', 'auth-result')">Test Connection</button>
+        <div id="auth-result" class="result"></div>
+    </div>
+
+    <div id="ai-service" class="service">
+        <h3>AI Service (Port 8004)</h3>
+        <button onclick="testConnection('http://127.0.0.1:8004/', 'ai-result')">Test Status</button>
+        <button onclick="testAI()">Test Categorization</button>
+        <div id="ai-result" class="result"></div>
+    </div>
+
+    <div id="group-service" class="service">
+        <h3>Group Expense Service (Port 8002)</h3>
+        <button onclick="testConnection('http://127.0.0.1:8002/actuator/health', 'group-result')">Test Health</button>
+        <div id="group-result" class="result"></div>
+    </div>
+
+    <div id="balance-service" class="service">
+        <h3>Balance Settlement Service (Port 8003)</h3>
+        <button onclick="testConnection('http://127.0.0.1:8003/actuator/health', 'balance-result')">Test Health</button>
+        <div id="balance-result" class="result"></div>
+    </div>
+
+    <div id="analytics-service" class="service">
+        <h3>Analytics Service (Port 8005)</h3>
+        <button onclick="testConnection('http://127.0.0.1:8005/actuator/health', 'analytics-result')">Test Health</button>
+        <div id="analytics-result" class="result"></div>
+    </div>
+
+    <div id="notification-service" class="service">
+        <h3>Notification Service (Port 8006)</h3>
+        <button onclick="testConnection('http://127.0.0.1:8006/actuator/health', 'notification-result')">Test Health</button>
+        <div id="notification-result" class="result"></div>
+    </div>
+
+    <script>
+        async function testConnection(url, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.text();
+                resultDiv.textContent = `Status: ${response.status}\nResponse: ${data}`;
+                
+                // Update service status
+                const serviceDiv = resultDiv.closest('.service');
+                serviceDiv.className = response.ok ? 'service online' : 'service offline';
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                const serviceDiv = resultDiv.closest('.service');
+                serviceDiv.className = 'service offline';
+            }
+        }
+
+        async function testAuth() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.textContent = 'Testing login...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'demo@finshare.app',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = `Login Status: ${response.status}\nToken: ${data.token ? data.token.substring(0, 20) + '...' : 'None'}\nUser: ${data.user ? data.user.name : 'None'}`;
+                
+                document.getElementById('auth-service').className = response.ok ? 'service online' : 'service offline';
+            } catch (error) {
+                resultDiv.textContent = `Login Error: ${error.message}`;
+                document.getElementById('auth-service').className = 'service offline';
+            }
+        }
+
+        async function testAI() {
+            const resultDiv = document.getElementById('ai-result');
+            resultDiv.textContent = 'Testing AI categorization...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8004/categorize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: 'Coffee at Starbucks',
+                        amount: 5.50
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = `AI Status: ${response.status}\nCategory: ${data.category || 'Unknown'}\nConfidence: ${data.confidence || 'N/A'}`;
+                
+                document.getElementById('ai-service').className = response.ok ? 'service online' : 'service offline';
+            } catch (error) {
+                resultDiv.textContent = `AI Error: ${error.message}`;
+                document.getElementById('ai-service').className = 'service offline';
+            }
+        }
+
+        // Auto-test all services on load
+        window.onload = function() {
+            testConnection('http://127.0.0.1:5000/test', 'auth-result');
+            testConnection('http://127.0.0.1:8004/', 'ai-result');
+            testConnection('http://127.0.0.1:8002/actuator/health', 'group-result');
+            testConnection('http://127.0.0.1:8003/actuator/health', 'balance-result');
+            testConnection('http://127.0.0.1:8005/actuator/health', 'analytics-result');
+            testConnection('http://127.0.0.1:8006/actuator/health', 'notification-result');
+        };
+    </script>
+</body>
+</html>

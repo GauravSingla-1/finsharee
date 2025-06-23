@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinShare Authentication Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        .step {
+            background: #d4edda;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 5px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 FinShare Authentication System</h1>
+        
+        <div class="highlight">
+            <strong>Authentication</strong> is the process of verifying who you are. In FinShare, it ensures only authorized users can access their financial data and perform expense operations.
+        </div>
+
+        <h2>How Authentication Works in FinShare</h2>
+        
+        <p>FinShare uses <strong>JWT (JSON Web Tokens)</strong> for secure authentication:</p>
+        
+        <div class="step">
+            <strong>Step 1:</strong> User provides email and password
+        </div>
+        <div class="step">
+            <strong>Step 2:</strong> System verifies credentials against user database
+        </div>
+        <div class="step">
+            <strong>Step 3:</strong> If valid, server generates a JWT token
+        </div>
+        <div class="step">
+            <strong>Step 4:</strong> Token is sent to client and stored securely
+        </div>
+        <div class="step">
+            <strong>Step 5:</strong> Client includes token in all subsequent API requests
+        </div>
+
+        <h2>Available Authentication Endpoints</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Method</th>
+                    <th>Purpose</th>
+                    <th>Required Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>/api/auth/login</td>
+                    <td>POST</td>
+                    <td>User login</td>
+                    <td>email, password</td>
+                </tr>
+                <tr>
+                    <td>/api/auth/register</td>
+                    <td>POST</td>
+                    <td>New user registration</td>
+                    <td>email, password, name</td>
+                </tr>
+                <tr>
+                    <td>/api/auth/user</td>
+                    <td>GET</td>
+                    <td>Get current user info</td>
+                    <td>Authorization header</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Demo Credentials</h2>
+        
+        <p>For testing purposes, use these demo credentials:</p>
+        
+        <div class="code-block">
+Email: demo@finshare.app
+Password: password123
+        </div>
+
+        <h2>Example API Calls</h2>
+        
+        <h3>Login Request</h3>
+        <div class="code-block">
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@finshare.app",
+  "password": "password123"
+}
+        </div>
+
+        <h3>Login Response</h3>
+        <div class="code-block">
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user1",
+    "name": "Demo User",
+    "email": "demo@finshare.app"
+  }
+}
+        </div>
+
+        <h3>Authenticated Request</h3>
+        <div class="code-block">
+GET /api/auth/user
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        </div>
+
+        <h2>Security Features</h2>
+        
+        <ul>
+            <li><strong>Password Hashing:</strong> Passwords are hashed using bcrypt before storage</li>
+            <li><strong>JWT Tokens:</strong> Stateless authentication with expiring tokens</li>
+            <li><strong>CORS Protection:</strong> Cross-origin request handling</li>
+            <li><strong>Input Validation:</strong> All inputs are validated and sanitized</li>
+            <li><strong>Secure Headers:</strong> Proper security headers on all responses</li>
+        </ul>
+
+        <h2>Testing Authentication</h2>
+        
+        <p>You can test authentication in multiple ways:</p>
+        
+        <div class="step">
+            <strong>Web Dashboard:</strong> Use the interactive API tester
+            <br><a href="/" class="btn">Open Dashboard</a>
+        </div>
+        
+        <div class="step">
+            <strong>curl Commands:</strong> Test from command line
+            <div class="code-block">
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@finshare.app","password":"password123"}'
+
+# Get user info (replace TOKEN with actual token)
+curl -X GET http://localhost:5000/api/auth/user \
+  -H "Authorization: Bearer TOKEN"
+            </div>
+        </div>
+
+        <h2>Integration with Other Services</h2>
+        
+        <p>Once authenticated, the JWT token allows access to:</p>
+        
+        <ul>
+            <li><strong>Group Management:</strong> Create and manage expense groups</li>
+            <li><strong>Expense Tracking:</strong> Add, edit, and view expenses</li>
+            <li><strong>AI Features:</strong> Expense categorization and financial advice</li>
+            <li><strong>Analytics:</strong> Personal spending insights and budgets</li>
+            <li><strong>Notifications:</strong> Receive updates about group activities</li>
+            <li><strong>Settlement:</strong> Calculate and settle group balances</li>
+        </ul>
+
+        <div class="highlight">
+            <strong>Remember:</strong> Always include the Authorization header with your JWT token when accessing protected endpoints.
+        </div>
+    </div>
+</body>
+</html>

@@ -17,6 +17,8 @@ let currentToken = '';
 // Service status checking
 async function checkServiceStatus() {
     const statusContainer = document.getElementById('serviceStatus');
+    if (!statusContainer) return;
+    
     const services = [
         { name: 'Auth Backend', url: API_CONFIG.SERVICES.auth, port: '5000' },
         { name: 'Group Expense', url: API_CONFIG.SERVICES.group, port: '8002' },
@@ -39,24 +41,35 @@ async function checkServiceStatus() {
         statusContainer.appendChild(card);
 
         try {
-            const response = await fetch(`${service.url}/actuator/health`, {
-                method: 'GET',
-                timeout: 5000
-            }).catch(() => 
-                fetch(`${service.url}/health`).catch(() =>
-                    fetch(`${service.url}/`))
-            );
+            let response;
+            let endpoint;
+            
+            // Try different health check endpoints based on service type
+            if (service.port === '5000') {
+                endpoint = '/test';
+                response = await fetch(`${service.url}${endpoint}`);
+            } else if (service.port === '8004') {
+                endpoint = '/';
+                response = await fetch(`${service.url}${endpoint}`);
+            } else {
+                // Java services with actuator
+                endpoint = '/actuator/health';
+                response = await fetch(`${service.url}${endpoint}`);
+            }
             
             if (response && response.ok) {
                 card.classList.add('online');
-                document.getElementById(`status-${service.port}`).textContent = '✅ Online';
+                const statusEl = document.getElementById(`status-${service.port}`);
+                if (statusEl) statusEl.textContent = '✅ Online';
             } else {
                 card.classList.add('offline');
-                document.getElementById(`status-${service.port}`).textContent = '❌ Offline';
+                const statusEl = document.getElementById(`status-${service.port}`);
+                if (statusEl) statusEl.textContent = '❌ Offline';
             }
         } catch (error) {
             card.classList.add('offline');
-            document.getElementById(`status-${service.port}`).textContent = '❌ Offline';
+            const statusEl = document.getElementById(`status-${service.port}`);
+            if (statusEl) statusEl.textContent = `❌ Error: ${error.message}`;
         }
     }
 }
