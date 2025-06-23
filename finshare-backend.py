@@ -111,6 +111,10 @@ async def root():
 async def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
+@app.get("/test")
+async def test_connection():
+    return {"message": "Backend connection successful", "timestamp": datetime.now().isoformat()}
+
 # Authentication endpoints
 @app.post("/api/auth/login")
 async def login(credentials: dict):

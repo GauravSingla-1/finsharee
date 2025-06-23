@@ -21,20 +21,43 @@ export default function LoginScreen({ onLogin }) {
 
   const makeAuthenticatedRequest = async (endpoint, options = {}) => {
     const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...API_CONFIG.HEADERS,
-        ...options.headers,
-      },
-    });
+    console.log('Making request to:', url);
+    console.log('Request options:', options);
     
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
-      throw new Error(errorData.detail || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Success response:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('Request error:', error);
+      throw error;
     }
-    
-    return response.json();
+  };
+
+  const testConnection = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/test`);
+      const result = await response.json();
+      Alert.alert('Connection Test', `Success: ${result.message}`);
+    } catch (error) {
+      Alert.alert('Connection Test Failed', error.message);
+    }
   };
 
   const handleLogin = async () => {
@@ -164,8 +187,21 @@ export default function LoginScreen({ onLogin }) {
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.switchButton, { backgroundColor: '#007AFF' }]}
+          onPress={testConnection}
+          disabled={loading}
+        >
+          <Text style={[styles.switchButtonText, { color: 'white' }]}>
+            Test Connection
+          </Text>
+        </TouchableOpacity>
+
         <Text style={styles.demoText}>
           Demo credentials: demo@finshare.app / password123
+        </Text>
+        <Text style={styles.demoText}>
+          Backend: {API_CONFIG.BASE_URL}
         </Text>
       </View>
 
