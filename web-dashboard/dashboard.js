@@ -103,14 +103,16 @@ async function testLogin() {
 }
 
 // Load endpoint configuration
-function loadEndpoint(service, endpoint) {
+function loadEndpoint(service, endpoint, clickedElement = null) {
     // Remove active class from all items
     document.querySelectorAll('.endpoint-item').forEach(item => {
         item.classList.remove('active');
     });
     
-    // Add active class to clicked item
-    event.target.classList.add('active');
+    // Add active class to clicked item if provided
+    if (clickedElement) {
+        clickedElement.classList.add('active');
+    }
 
     const endpointConfigs = {
         auth: {
@@ -284,7 +286,10 @@ async function executeRequest() {
     }
 
     try {
-        document.getElementById('apiTester').classList.add('loading');
+        const apiTester = document.getElementById('apiTester');
+        if (apiTester) {
+            apiTester.classList.add('loading');
+        }
         
         const startTime = Date.now();
         const response = await fetch(url, requestOptions);
@@ -303,7 +308,10 @@ async function executeRequest() {
     } catch (error) {
         displayResponse(0, { error: error.message, type: 'Network Error' });
     } finally {
-        document.getElementById('apiTester').classList.remove('loading');
+        const apiTester = document.getElementById('apiTester');
+        if (apiTester) {
+            apiTester.classList.remove('loading');
+        }
     }
 }
 

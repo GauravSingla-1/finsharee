@@ -1,8 +1,8 @@
-modules = ["java-graalvm22.3", "nodejs-20", "python-3.11", "bash", "python3"]
+modules = ["java-graalvm22.3", "nodejs-20", "web", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["cargo", "glibcLocales", "jq", "libiconv", "libxcrypt", "maven", "redis", "rustc"]
+packages = ["cargo", "glibcLocales", "jq", "libiconv", "libxcrypt", "maven", "openssl", "postgresql", "redis", "rustc"]
 
 [workflows]
 runButton = "Project"
@@ -142,7 +142,8 @@ args = "cd /home/runner/workspace/web-dashboard && python cors-proxy.py"
 waitForPort = 3001
 
 [deployment]
-run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+deploymentTarget = "autoscale"
 
 [[ports]]
 localPort = 3000
@@ -155,6 +156,10 @@ externalPort = 8008
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 8080
 
 [[ports]]
 localPort = 6379
