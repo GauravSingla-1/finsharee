@@ -14,7 +14,7 @@ CORS(app)
 
 # Service endpoints
 SERVICES = {
-    'auth': 'http://127.0.0.1:5000',
+    'auth': 'http://127.0.0.1:5001',
     'ai': 'http://127.0.0.1:8004',
     'group': 'http://127.0.0.1:8002',
     'balance': 'http://127.0.0.1:8003',

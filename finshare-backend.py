@@ -343,4 +343,4 @@ if __name__ == "__main__":
     print("Features: Authentication, Smart AI, Expense Management")
     print("Demo login: demo@finshare.app / password123")
     print("API available at: http://0.0.0.0:5001")
-    uvicorn.run(app, host="0.0.0.0", port=5001)
+    uvicorn.run(app, host="0.0.0.0", port=5001, reload=False)
