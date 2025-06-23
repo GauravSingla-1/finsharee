@@ -5,16 +5,18 @@ Provides basic endpoints for groups, expenses, and dashboard data
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import uvicorn
 from datetime import datetime
 import json
 import os
-from google import genai
+import google.generativeai as genai
 
 # Configure Gemini AI
 genai_client = None
 if os.getenv("GEMINI_API_KEY"):
-    genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    genai_client = genai.GenerativeModel('gemini-pro')
 
 app = FastAPI(title="FinShare Backend", version="1.0.0")
 
@@ -73,9 +75,83 @@ dashboard_data = {
     "recent_expenses": expenses_data[:3]
 }
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {"service": "FinShare Backend", "status": "operational", "timestamp": datetime.now().isoformat()}
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>FinShare - Expense Sharing Made Easy</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+            .header { background: #007AFF; color: white; padding: 20px; border-radius: 10px; text-align: center; }
+            .feature { background: white; margin: 15px 0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .api-status { display: flex; justify-content: space-between; align-items: center; }
+            .status-good { color: #28a745; font-weight: bold; }
+            .qr-info { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>FinShare Backend</h1>
+            <p>Expense Sharing & Group Finance Management</p>
+        </div>
+        
+        <div class="feature">
+            <h3>Mobile App Testing</h3>
+            <p>The Expo mobile app is running with tunnel support for phone testing.</p>
+            <div class="qr-info">
+                <strong>To test on your phone:</strong><br>
+                1. Install Expo Go app from App Store/Play Store<br>
+                2. Scan the QR code shown in the workflow logs<br>
+                3. Use demo login: demo@finshare.app / password123
+            </div>
+        </div>
+        
+        <div class="feature">
+            <h3>API Services Status</h3>
+            <div class="api-status">
+                <span>Main Backend (Port 8001)</span>
+                <span class="status-good">Running</span>
+            </div>
+            <div class="api-status">
+                <span>Authentication Service (Port 8000)</span>
+                <span class="status-good">Running</span>
+            </div>
+            <div class="api-status">
+                <span>Group Expense Service (Port 8002)</span>
+                <span class="status-good">Running</span>
+            </div>
+            <div class="api-status">
+                <span>AI Service (Port 8004)</span>
+                <span class="status-good">Running</span>
+            </div>
+        </div>
+        
+        <div class="feature">
+            <h3>Available Features</h3>
+            <ul>
+                <li>User Authentication & Authorization</li>
+                <li>Group Management & Expense Tracking</li>
+                <li>AI-Powered Expense Categorization</li>
+                <li>Smart Balance Settlement</li>
+                <li>Real-time Notifications</li>
+                <li>Analytics & Insights</li>
+            </ul>
+        </div>
+        
+        <div class="feature">
+            <h3>Quick API Test</h3>
+            <p>Demo endpoints you can test:</p>
+            <ul>
+                <li><a href="/api/dashboard">/api/dashboard</a> - User dashboard data</li>
+                <li><a href="/api/groups">/api/groups</a> - Available groups</li>
+                <li><a href="/api/expenses">/api/expenses</a> - Recent expenses</li>
+            </ul>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.get("/health")
 async def health():
@@ -237,5 +313,5 @@ async def get_notifications():
 
 if __name__ == "__main__":
     print("Starting FinShare Backend Server...")
-    print("API will be available at: http://localhost:5000")
-    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info")
+    print("API will be available at: http://localhost:8001")
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")

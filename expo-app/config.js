@@ -1,7 +1,7 @@
 // API Configuration for FinShare Mobile App
 export const API_CONFIG = {
   // Use tunnel URL for mobile device testing with new authenticated backend
-  BASE_URL: 'http://172.31.128.45:8000',
+  BASE_URL: 'http://localhost:8001',
   
   ENDPOINTS: {
     // Authentication endpoints

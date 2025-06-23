@@ -2,7 +2,7 @@ modules = ["java-graalvm22.3", "nodejs-20", "python-3.11", "bash"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["glibcLocales", "jq", "libxcrypt", "maven", "redis"]
+packages = ["cargo", "glibcLocales", "jq", "libiconv", "libxcrypt", "maven", "redis", "rustc"]
 
 [workflows]
 runButton = "Project"
@@ -30,23 +30,19 @@ args = "Notification Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "API Gateway"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Group Expense Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Expo Mobile App"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Backend Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "FinShare Auth Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Main Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Expo Mobile App"
 
 [[workflows.workflow]]
 name = "Balance Settlement Service"
@@ -85,15 +81,6 @@ args = "cd services/notification-service && mvn spring-boot:run -Dspring-boot.ru
 waitForPort = 8006
 
 [[workflows.workflow]]
-name = "API Gateway"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd services/api-gateway && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""
-waitForPort = 5000
-
-[[workflows.workflow]]
 name = "Group Expense Service"
 author = "agent"
 
@@ -101,24 +88,6 @@ author = "agent"
 task = "shell.exec"
 args = "cd services/group-expense-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8002\""
 waitForPort = 8002
-
-[[workflows.workflow]]
-name = "Expo Mobile App"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd expo-app && npx expo start --tunnel"
-waitForPort = 8081
-
-[[workflows.workflow]]
-name = "Backend Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python simple-backend.py"
-waitForPort = 5000
 
 [[workflows.workflow]]
 name = "FinShare Auth Backend"
@@ -129,8 +98,29 @@ task = "shell.exec"
 args = "python finshare-backend.py"
 waitForPort = 8000
 
+[[workflows.workflow]]
+name = "Main Backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && python simple-backend.py"
+waitForPort = 8001
+
+[[workflows.workflow]]
+name = "Expo Mobile App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace/expo-app && npx expo start --tunnel"
+
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
+
+[[ports]]
+localPort = 3000
+externalPort = 6800
 
 [[ports]]
 localPort = 5000
@@ -139,6 +129,10 @@ externalPort = 80
 [[ports]]
 localPort = 6379
 externalPort = 4200
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 8001
