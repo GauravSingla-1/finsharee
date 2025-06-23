@@ -1,7 +1,7 @@
 // API Configuration for FinShare Mobile App
 export const API_CONFIG = {
   // Dynamic URL detection for mobile device testing
-  BASE_URL: 'http://172.31.128.6:5000',
+  BASE_URL: 'https://01hs0h02dgm2ywm07zq17nnzpa-5000.proxy.replit.dev',
   
   ENDPOINTS: {
     // Authentication endpoints
