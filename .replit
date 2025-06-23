@@ -18,10 +18,6 @@ args = "Balance Settlement Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AI Service"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Analytics Service"
 
 [[workflows.workflow.tasks]]
@@ -34,15 +30,19 @@ args = "Group Expense Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "FinShare Auth Backend"
+args = "AI Service"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Main Backend"
+args = "FinShare Backend"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Expo Mobile App"
+args = "Expo App"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Backend"
 
 [[workflows.workflow]]
 name = "Balance Settlement Service"
@@ -52,15 +52,6 @@ author = "agent"
 task = "shell.exec"
 args = "cd services/balance-settlement-service && mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=8003\""
 waitForPort = 8003
-
-[[workflows.workflow]]
-name = "AI Service"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd services/ai-service && python main.py"
-waitForPort = 8004
 
 [[workflows.workflow]]
 name = "Analytics Service"
@@ -90,30 +81,39 @@ args = "cd services/group-expense-service && mvn spring-boot:run -Dspring-boot.r
 waitForPort = 8002
 
 [[workflows.workflow]]
-name = "FinShare Auth Backend"
+name = "AI Service"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python finshare-backend.py"
-waitForPort = 8000
+args = "cd /home/runner/workspace/services/ai-service && python main.py"
+waitForPort = 8004
 
 [[workflows.workflow]]
-name = "Main Backend"
+name = "FinShare Backend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace && python simple-backend.py"
-waitForPort = 8001
+args = "cd /home/runner/workspace && python finshare-backend.py"
+waitForPort = 9000
 
 [[workflows.workflow]]
-name = "Expo Mobile App"
+name = "Expo App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace/expo-app && npx expo start --tunnel"
+args = "cd /home/runner/workspace/expo-app && npx expo start --tunnel --clear"
+
+[[workflows.workflow]]
+name = "Backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && python finshare-backend.py"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "mvn clean compile spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dserver.port=5000\""]
