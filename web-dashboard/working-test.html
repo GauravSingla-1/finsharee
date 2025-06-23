@@ -91,7 +91,7 @@
             resultDiv.textContent = 'Getting JWT token...';
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -120,12 +120,12 @@
             statusDiv.innerHTML = '';
             
             const services = [
-                { name: 'Auth Backend', url: 'http://127.0.0.1:5000/test', port: '5000' },
-                { name: 'AI Service', url: 'http://127.0.0.1:8004/', port: '8004' },
-                { name: 'Group Service', url: 'http://127.0.0.1:8002/actuator/health', port: '8002' },
-                { name: 'Balance Service', url: 'http://127.0.0.1:8003/actuator/health', port: '8003' },
-                { name: 'Analytics Service', url: 'http://127.0.0.1:8005/actuator/health', port: '8005' },
-                { name: 'Notification Service', url: 'http://127.0.0.1:8006/actuator/health', port: '8006' }
+                { name: 'Auth Backend', url: 'http://127.0.0.1:3001/auth/test', port: '5000' },
+                { name: 'AI Service', url: 'http://127.0.0.1:3001/ai/', port: '8004' },
+                { name: 'Group Service', url: 'http://127.0.0.1:3001/group/actuator/health', port: '8002' },
+                { name: 'Balance Service', url: 'http://127.0.0.1:3001/balance/actuator/health', port: '8003' },
+                { name: 'Analytics Service', url: 'http://127.0.0.1:3001/analytics/actuator/health', port: '8005' },
+                { name: 'Notification Service', url: 'http://127.0.0.1:3001/notification/actuator/health', port: '8006' }
             ];
 
             for (const service of services) {
@@ -162,7 +162,7 @@
             }
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/auth/user', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/auth/user', {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 
@@ -177,7 +177,7 @@
             const resultDiv = document.getElementById('groups-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/groups', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/groups', {
                     headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
                 });
                 
@@ -197,7 +197,7 @@
             }
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/groups', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/groups', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -220,7 +220,7 @@
             const resultDiv = document.getElementById('groups-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/expenses', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/expenses', {
                     headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
                 });
                 
@@ -240,7 +240,7 @@
             }
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/expenses', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/expenses', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -265,7 +265,7 @@
             const resultDiv = document.getElementById('ai-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/ai/categorize', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/ai/categorize', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -288,7 +288,7 @@
             const resultDiv = document.getElementById('ai-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/ai/chat', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/ai/chat', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
@@ -310,7 +310,7 @@
             const resultDiv = document.getElementById('ai-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/dashboard', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/dashboard', {
                     headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
                 });
                 
@@ -325,7 +325,7 @@
             const resultDiv = document.getElementById('ai-result');
             
             try {
-                const response = await fetch('http://127.0.0.1:5000/api/notifications', {
+                const response = await fetch('http://127.0.0.1:3001/auth/api/notifications', {
                     headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
                 });
                 
